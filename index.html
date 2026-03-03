@@ -8,27 +8,38 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* 確保直式運算的等寬與對齊 */
-        .math-font { font-family: 'Courier New', monospace; letter-spacing: 0.3em; }
-        body { margin: 0; overflow-x: hidden; }
-        /* 隱藏與顯示的動畫過渡 */
-        .detail-hidden { opacity: 0; visibility: hidden; transition: opacity 0.3s; height: 0; overflow: hidden; }
-        .detail-show { opacity: 1; visibility: visible; transition: opacity 0.3s; height: auto; margin-top: 10px; }
+        /* 核心關鍵：使用等寬字體並保留所有空白，保證 100% 完美對齊 */
+        .math-font { 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 1.3rem; 
+            line-height: 1.3;
+            letter-spacing: 0.1em;
+            white-space: pre; 
+        }
+        body { margin: 0; overflow-x: hidden; background-color: #f8fafc; }
+        
+        /* 詳解顯示動畫 */
+        .detail-hidden { display: none; }
+        .detail-show { display: block; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(-5px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col" onload="initApp()">
+<body class="text-gray-800 font-sans flex flex-col min-h-screen" onload="initApp()">
 
     <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center px-6">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
             <span class="text-2xl">📖</span>
             <h1 class="text-xl font-bold tracking-wider">作業繳交小幫手</h1>
         </div>
         <div class="text-sm font-medium opacity-80" id="countDisplay">
-            累積出題次數：0
+            累積出題：0 次
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto w-full p-6 flex-1 flex flex-col gap-6">
+    <main class="max-w-7xl mx-auto w-full p-6 flex-1 flex flex-col gap-5">
         
         <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex flex-wrap gap-6 items-center">
@@ -52,32 +63,42 @@
                 </div>
             </div>
             <button onclick="generateAll()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
-                ＋ 新增作業 (8題)
+                ＋ 重新出題 (8題)
             </button>
         </div>
 
-        <div id="quizContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            </div>
+        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex gap-4 items-center shadow-sm">
+            <button onclick="saveCurrentToHistory()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex-shrink-0">
+                💾 儲存目前這組題目
+            </button>
+            <div class="w-px h-8 bg-indigo-200 mx-2"></div>
+            <div class="text-sm text-indigo-800 font-bold flex-shrink-0">讀取存檔：</div>
+            <div id="historyContainer" class="flex flex-wrap gap-2 items-center flex-1">
+                </div>
+        </div>
+
+        <div id="quizContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+        
     </main>
 
     <script>
         let questions = [];
         let practiceCount = parseInt(localStorage.getItem('math_pure_count') || '0');
+        let historyRecords = JSON.parse(localStorage.getItem('math_snapshots') || '[]');
 
-        // 初始化應用程式
         function initApp() {
-            document.getElementById('countDisplay').innerText = `累積出題次數：${practiceCount}`;
+            document.getElementById('countDisplay').innerText = `累積出題：${practiceCount} 次`;
+            renderHistory();
             generateAll();
         }
 
-        // 產生指定位數的隨機數字
         function generateNum(digits) {
             const min = Math.pow(10, digits - 1);
             const max = Math.pow(10, digits) - 1;
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
-        // 重新產生所有題目
+        // ================= 核心邏輯：出題與存檔 =================
         function generateAll() {
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
@@ -87,130 +108,198 @@
             for (let i = 0; i < 8; i++) {
                 const type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
                 questions.push({
-                    type: type,
-                    n1: generateNum(d1),
-                    n2: generateNum(d2),
-                    show: false,
+                    id: Math.random().toString(36).substring(2, 9),
+                    type: type, n1: generateNum(d1), n2: generateNum(d2), show: false,
                     label: `第 ${String(i + 1).padStart(2, '0')} 題`
                 });
             }
 
             practiceCount++;
             localStorage.setItem('math_pure_count', practiceCount);
-            document.getElementById('countDisplay').innerText = `累積出題次數：${practiceCount}`;
+            document.getElementById('countDisplay').innerText = `累積出題：${practiceCount} 次`;
             renderAll();
         }
 
-        // 更換單一題目
         function refreshOne(event, index) {
-            event.stopPropagation(); // 防止觸發卡片翻轉
+            event.stopPropagation();
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
             const d2 = parseInt(document.getElementById('d2Select').value);
             const type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
 
             questions[index] = {
-                type: type,
-                n1: generateNum(d1),
-                n2: generateNum(d2),
-                show: false,
+                id: Math.random().toString(36).substring(2, 9),
+                type: type, n1: generateNum(d1), n2: generateNum(d2), show: false,
                 label: `第 ${String(index + 1).padStart(2, '0')} 題`
             };
             renderAll();
         }
 
-        // 切換顯示詳解
+        // 儲存當下題目快照 (Snapshot)
+        function saveCurrentToHistory() {
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // 複製一份當前的題目陣列
+            const record = {
+                id: Date.now(),
+                time: timeStr,
+                data: JSON.parse(JSON.stringify(questions))
+            };
+            
+            historyRecords.unshift(record); // 把新紀錄放最前面
+            if (historyRecords.length > 8) historyRecords.pop(); // 最多保留 8 組
+            
+            localStorage.setItem('math_snapshots', JSON.stringify(historyRecords));
+            renderHistory();
+        }
+
+        // 讀取歷史存檔
+        function loadHistory(id) {
+            const record = historyRecords.find(r => r.id === id);
+            if (record) {
+                // 強制將所有題目的詳解收起
+                questions = JSON.parse(JSON.stringify(record.data)).map(q => ({...q, show: false}));
+                renderAll();
+            }
+        }
+
+        // 渲染存檔按鈕
+        function renderHistory() {
+            const container = document.getElementById('historyContainer');
+            if (historyRecords.length === 0) {
+                container.innerHTML = '<span class="text-indigo-300 text-sm">尚無存檔</span>';
+                return;
+            }
+            container.innerHTML = historyRecords.map((r, i) => `
+                <button onclick="loadHistory(${r.id})" class="text-xs bg-white text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-full hover:bg-indigo-600 hover:text-white transition shadow-sm font-bold">
+                    🕒 ${r.time} 紀錄
+                </button>
+            `).join('');
+        }
+
         function toggleShow(index) {
             questions[index].show = !questions[index].show;
             renderAll();
         }
 
-        // 產生乘法直式 HTML
-        function getMulHtml(n1, n2, show) {
-            const s2 = n2.toString().split('').reverse();
-            let steps = '';
-            s2.forEach((digit, i) => {
-                if (digit !== "0") {
-                    steps += `<div class="text-gray-500 text-sm">${n1 * parseInt(digit)}${" ".repeat(i)}</div>`;
+        // ================= 核心演算法：完美文字排版 =================
+        
+        // 乘法完美對齊
+        function buildMulHTML(n1, n2, show) {
+            const n1Str = n1.toString();
+            const n2Str = n2.toString();
+            const ansStr = (n1 * n2).toString();
+            const width = Math.max(n1Str.length, n2Str.length + 2, ansStr.length); // 計算總寬度
+            
+            let out = "";
+            out += " ".repeat(width - n1Str.length) + n1Str + "\n";
+            out += " ".repeat(width - n2Str.length - 2) + "× " + n2Str + "\n";
+            out += "-".repeat(width) + "\n";
+            
+            let detail = "";
+            const s2 = n2Str.split('').reverse();
+            let validSteps = 0;
+            for(let i=0; i<s2.length; i++) {
+                if(s2[i] !== '0') {
+                    let partStr = (n1 * parseInt(s2[i])).toString();
+                    let padLeft = width - i - partStr.length; // 計算前面要補幾個空白
+                    detail += " ".repeat(padLeft) + partStr + " ".repeat(i) + "\n";
+                    validSteps++;
                 }
-            });
+            }
+            
+            if (validSteps > 1) {
+                detail += "-".repeat(width) + "\n";
+                detail += `<span class="text-red-500 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
+            } else {
+                detail += `<span class="text-red-500 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
+            }
 
-            return `
-                <div class="math-font text-right text-xl mt-4 w-full px-4">
-                    <div class="pr-2">${n1}</div>
-                    <div class="border-b-2 border-gray-800 pb-1">× ${n2}</div>
-                    <div class="${show ? 'detail-show' : 'detail-hidden'}">
-                        ${steps}
-                        <div class="border-t border-gray-300 mt-1 text-red-500 font-bold text-2xl">${n1 * n2}</div>
-                    </div>
-                </div>
-            `;
+            return `<div class="math-font">${out}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-500">${detail}</div></div>`;
         }
 
-        // 產生除法直式 HTML
-        function getDivHtml(n1, n2, show) {
-            const q = Math.floor(n1 / n2);
+        // 除法逐位扣減完美對齊
+        function buildDivHTML(n1, n2, show) {
+            const q = Math.floor(n1 / n2).toString();
             const n1Str = n1.toString();
-            let currentVal = 0;
-            let processHtml = '';
+            const n2Str = n2.toString();
+            const preLen = n2Str.length + 3; // "3 ) " 的長度
+            
+            let outTop = "";
+            const qPad = preLen + n1Str.length - q.length;
+            outTop += `<div class="${show ? 'opacity-100' : 'opacity-0'} text-red-500 font-bold transition-opacity">` + " ".repeat(qPad) + q + "</div>";
+            
+            let outBase = "";
+            outBase += " ".repeat(preLen) + "-".repeat(n1Str.length) + "\n";
+            outBase += n2Str + " ) " + n1Str + "\n";
+            
+            let detail = "";
+            let cv = "";
+            let stepsCount = 0;
             
             for (let i = 0; i < n1Str.length; i++) {
-                currentVal = currentVal * 10 + parseInt(n1Str[i]);
-                if (currentVal >= n2) {
-                    const sub = Math.floor(currentVal / n2) * n2;
-                    const rem = currentVal % n2;
-                    const nextDigit = n1Str[i+1] || '';
-                    const indent1 = " ".repeat(i + 1 - sub.toString().length);
-                    const indent2 = " ".repeat(i + 1 - rem.toString().length);
-                    
-                    processHtml += `
-                        <div class="w-full text-left">
-                            <div>${indent1}${sub}</div>
-                            <div class="border-b border-gray-300 w-16 my-1"></div>
-                            <div>${indent2}${rem}${nextDigit}</div>
-                        </div>
-                    `;
-                    currentVal %= n2;
+                cv += n1Str[i];
+                let cvNum = parseInt(cv, 10);
+                
+                if (cvNum >= n2 || (i === n1Str.length - 1 && stepsCount > 0)) {
+                    let sub = Math.floor(cvNum / n2) * n2;
+                    if (sub > 0 || i === n1Str.length - 1) {
+                        let subStr = sub.toString();
+                        if (sub > 0) {
+                            let subPad = preLen + i + 1 - subStr.length;
+                            detail += " ".repeat(subPad) + subStr + "\n";
+                            
+                            let dashLen = Math.max(cv.length, subStr.length);
+                            let dashPad = preLen + i + 1 - dashLen;
+                            detail += " ".repeat(dashPad) + "-".repeat(dashLen) + "\n";
+                            
+                            cv = (cvNum - sub).toString();
+                            if (cv === "0") cv = ""; 
+                        }
+                        
+                        if (i < n1Str.length - 1) {
+                            let displayCv = cv + n1Str[i+1];
+                            let dropPad = preLen + i + 2 - displayCv.length;
+                            detail += " ".repeat(dropPad) + displayCv + "\n";
+                            stepsCount++;
+                        } else {
+                            let displayCv = cv === "" ? "0" : cv;
+                            let remPad = preLen + i + 1 - displayCv.length;
+                            detail += " ".repeat(remPad) + displayCv + "\n";
+                        }
+                    }
+                } else if (i < n1Str.length - 1 && stepsCount > 0) {
+                     let displayCv = parseInt(cv + n1Str[i+1], 10).toString(); 
+                     let dropPad = preLen + i + 2 - displayCv.length;
+                     detail += " ".repeat(dropPad) + displayCv + "\n";
                 }
             }
 
-            return `
-                <div class="math-font text-xl mt-4 flex flex-col items-center w-full px-4">
-                    <div class="text-red-500 font-bold ml-6 h-6 w-full text-left pl-8 ${show ? 'opacity-100' : 'opacity-0'}">${q}</div>
-                    <div class="flex items-end w-full justify-start pl-8">
-                        <div class="border-r-2 border-gray-800 pr-1">${n2}</div>
-                        <div class="border-t-2 border-gray-800 px-1">${n1}</div>
-                    </div>
-                    <div class="${show ? 'detail-show' : 'detail-hidden'} flex flex-col items-start w-full pl-10 text-sm text-gray-500">
-                        ${processHtml}
-                    </div>
-                </div>
-            `;
+            return `<div class="math-font">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-500">${detail}</div></div>`;
         }
 
-        // 渲染所有題目到畫面上
+        // ================= 渲染畫面 =================
         function renderAll() {
             const container = document.getElementById('quizContainer');
-            container.innerHTML = ''; // 清空現有內容
+            container.innerHTML = '';
 
             questions.forEach((q, index) => {
+                const mathContent = q.type === 'mul' ? buildMulHTML(q.n1, q.n2, q.show) : buildDivHTML(q.n1, q.n2, q.show);
+                
                 const cardHtml = `
-                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[400px] shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
-                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
-                            <span class="text-blue-600 font-bold text-sm bg-blue-50 px-2 py-1 rounded">${q.label}</span>
-                            <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1 rounded transition opacity-0 group-hover:opacity-100" title="更換此題數字">🔄</button>
-                        </div>
-                        
-                        <div class="text-xs text-gray-400 text-center mb-2">
-                            ${q.type === 'mul' ? '乘法直式' : '除法直式'} (點擊看詳解)
+                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[380px] shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
+                            <span class="text-blue-600 font-bold text-sm bg-blue-50 border border-blue-100 px-2 py-1 rounded shadow-sm">${q.label}</span>
+                            <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100" title="單獨更換此題">🔄</button>
                         </div>
                         
                         <div class="flex-1 flex justify-center w-full">
-                            ${q.type === 'mul' ? getMulHtml(q.n1, q.n2, q.show) : getDivHtml(q.n1, q.n2, q.show)}
+                            ${mathContent}
                         </div>
 
-                        <div class="mt-4 pt-3 border-t border-gray-50 text-center text-red-500 font-bold text-lg ${q.show ? 'opacity-100' : 'opacity-0'} transition-opacity">
-                            ${q.type === 'mul' ? `＝ ${q.n1 * q.n2}` : `商：${Math.floor(q.n1 / q.n2)}`}
+                        <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
+                            點擊卡片空白處顯示 / 隱藏詳解
                         </div>
                     </div>
                 `;
