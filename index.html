@@ -6,207 +6,217 @@
     <title>作業繳交小幫手 - 數學出題</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
+        /* 確保直式運算的等寬與對齊 */
         .math-font { font-family: 'Courier New', monospace; letter-spacing: 0.3em; }
         body { margin: 0; overflow-x: hidden; }
+        /* 隱藏與顯示的動畫過渡 */
+        .detail-hidden { opacity: 0; visibility: hidden; transition: opacity 0.3s; height: 0; overflow: hidden; }
+        .detail-show { opacity: 1; visibility: visible; transition: opacity 0.3s; height: auto; margin-top: 10px; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col" onload="initApp()">
 
-    <div id="root"></div>
+    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center px-6">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">📖</span>
+            <h1 class="text-xl font-bold tracking-wider">作業繳交小幫手</h1>
+        </div>
+        <div class="text-sm font-medium opacity-80" id="countDisplay">
+            累積出題次數：0
+        </div>
+    </header>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+    <main class="max-w-7xl mx-auto w-full p-6 flex-1 flex flex-col gap-6">
+        
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 items-center justify-between">
+            <div class="flex flex-wrap gap-6 items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-600 font-bold">題型：</span>
+                    <select id="modeSelect" class="border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="mix">混合模式 (乘除各半)</option>
+                        <option value="mul">純乘法練習</option>
+                        <option value="div">純除法練習</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 text-gray-600 font-bold">
+                    位數：
+                    <select id="d1Select" class="border rounded px-2 py-1">
+                        <option value="3">3位</option><option value="4">4位</option><option value="5">5位</option>
+                    </select>
+                    <span class="text-lg mx-1">÷/×</span>
+                    <select id="d2Select" class="border rounded px-2 py-1">
+                        <option value="1">1位</option><option value="2" selected>2位</option><option value="3">3位</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="generateAll()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
+                ＋ 新增作業 (8題)
+            </button>
+        </div>
 
-        const MathDetail = ({ type, n1, n2, show }) => {
-            if (type === 'mul') {
-                const s2 = n2.toString().split('').reverse();
-                return (
-                    <div className="math-font text-right text-xl mt-4">
-                        <div className="pr-2">{n1}</div>
-                        <div className="border-b-2 border-gray-800 pb-1">× {n2}</div>
-                        <div className={`transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}>
-                            {s2.map((digit, i) => (
-                                digit !== "0" && <div key={i} className="text-gray-500 text-sm">{n1 * parseInt(digit)}{" ".repeat(i)}</div>
-                            ))}
-                            <div className="border-t border-gray-300 mt-1 text-red-500 font-bold text-2xl">{n1 * n2}</div>
-                        </div>
-                    </div>
-                );
+        <div id="quizContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            </div>
+    </main>
+
+    <script>
+        let questions = [];
+        let practiceCount = parseInt(localStorage.getItem('math_pure_count') || '0');
+
+        // 初始化應用程式
+        function initApp() {
+            document.getElementById('countDisplay').innerText = `累積出題次數：${practiceCount}`;
+            generateAll();
+        }
+
+        // 產生指定位數的隨機數字
+        function generateNum(digits) {
+            const min = Math.pow(10, digits - 1);
+            const max = Math.pow(10, digits) - 1;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // 重新產生所有題目
+        function generateAll() {
+            const mode = document.getElementById('modeSelect').value;
+            const d1 = parseInt(document.getElementById('d1Select').value);
+            const d2 = parseInt(document.getElementById('d2Select').value);
+
+            questions = [];
+            for (let i = 0; i < 8; i++) {
+                const type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
+                questions.push({
+                    type: type,
+                    n1: generateNum(d1),
+                    n2: generateNum(d2),
+                    show: false,
+                    label: `第 ${String(i + 1).padStart(2, '0')} 題`
+                });
             }
 
+            practiceCount++;
+            localStorage.setItem('math_pure_count', practiceCount);
+            document.getElementById('countDisplay').innerText = `累積出題次數：${practiceCount}`;
+            renderAll();
+        }
+
+        // 更換單一題目
+        function refreshOne(event, index) {
+            event.stopPropagation(); // 防止觸發卡片翻轉
+            const mode = document.getElementById('modeSelect').value;
+            const d1 = parseInt(document.getElementById('d1Select').value);
+            const d2 = parseInt(document.getElementById('d2Select').value);
+            const type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
+
+            questions[index] = {
+                type: type,
+                n1: generateNum(d1),
+                n2: generateNum(d2),
+                show: false,
+                label: `第 ${String(index + 1).padStart(2, '0')} 題`
+            };
+            renderAll();
+        }
+
+        // 切換顯示詳解
+        function toggleShow(index) {
+            questions[index].show = !questions[index].show;
+            renderAll();
+        }
+
+        // 產生乘法直式 HTML
+        function getMulHtml(n1, n2, show) {
+            const s2 = n2.toString().split('').reverse();
+            let steps = '';
+            s2.forEach((digit, i) => {
+                if (digit !== "0") {
+                    steps += `<div class="text-gray-500 text-sm">${n1 * parseInt(digit)}${" ".repeat(i)}</div>`;
+                }
+            });
+
+            return `
+                <div class="math-font text-right text-xl mt-4 w-full px-4">
+                    <div class="pr-2">${n1}</div>
+                    <div class="border-b-2 border-gray-800 pb-1">× ${n2}</div>
+                    <div class="${show ? 'detail-show' : 'detail-hidden'}">
+                        ${steps}
+                        <div class="border-t border-gray-300 mt-1 text-red-500 font-bold text-2xl">${n1 * n2}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 產生除法直式 HTML
+        function getDivHtml(n1, n2, show) {
             const q = Math.floor(n1 / n2);
-            const r = n1 % n2;
             const n1Str = n1.toString();
             let currentVal = 0;
-            let process = [];
+            let processHtml = '';
             
             for (let i = 0; i < n1Str.length; i++) {
                 currentVal = currentVal * 10 + parseInt(n1Str[i]);
                 if (currentVal >= n2) {
                     const sub = Math.floor(currentVal / n2) * n2;
-                    process.push({ sub, indent: i + 1 - sub.toString().length, rem: currentVal % n2, nextDigit: n1Str[i+1] || '' });
+                    const rem = currentVal % n2;
+                    const nextDigit = n1Str[i+1] || '';
+                    const indent1 = " ".repeat(i + 1 - sub.toString().length);
+                    const indent2 = " ".repeat(i + 1 - rem.toString().length);
+                    
+                    processHtml += `
+                        <div class="w-full text-left">
+                            <div>${indent1}${sub}</div>
+                            <div class="border-b border-gray-300 w-16 my-1"></div>
+                            <div>${indent2}${rem}${nextDigit}</div>
+                        </div>
+                    `;
                     currentVal %= n2;
                 }
             }
 
-            return (
-                <div className="math-font text-xl mt-4 flex flex-col items-center">
-                    <div className={`text-red-500 font-bold ml-6 h-6 ${show ? 'opacity-100' : 'opacity-0'}`}>{q}</div>
-                    <div className="flex items-end">
-                        <div className="border-r-2 border-gray-800 pr-1">{n2}</div>
-                        <div className="border-t-2 border-gray-800 px-1">{n1}</div>
+            return `
+                <div class="math-font text-xl mt-4 flex flex-col items-center w-full px-4">
+                    <div class="text-red-500 font-bold ml-6 h-6 w-full text-left pl-8 ${show ? 'opacity-100' : 'opacity-0'}">${q}</div>
+                    <div class="flex items-end w-full justify-start pl-8">
+                        <div class="border-r-2 border-gray-800 pr-1">${n2}</div>
+                        <div class="border-t-2 border-gray-800 px-1">${n1}</div>
                     </div>
-                    <div className={`text-sm text-gray-500 mt-1 flex flex-col items-start w-full pl-8 ${show ? 'opacity-100' : 'opacity-0'}`}>
-                        {process.map((p, i) => (
-                            <div key={i} className="w-full">
-                                <div>{" ".repeat(p.indent)}{p.sub}</div>
-                                <div className="border-b border-gray-300 w-16 my-1"></div>
-                                <div>{" ".repeat(i + 1 - p.rem.toString().length)}{p.rem}{p.nextDigit}</div>
-                            </div>
-                        ))}
+                    <div class="${show ? 'detail-show' : 'detail-hidden'} flex flex-col items-start w-full pl-10 text-sm text-gray-500">
+                        ${processHtml}
                     </div>
                 </div>
-            );
-        };
+            `;
+        }
 
-        const App = () => {
-            const [questions, setQuestions] = useState([]);
-            const [config, setConfig] = useState({ mode: 'mix', d1: 3, d2: 2 });
-            const [practiceCount, setPracticeCount] = useState(0);
+        // 渲染所有題目到畫面上
+        function renderAll() {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = ''; // 清空現有內容
 
-            useEffect(() => {
-                const saved = localStorage.getItem('math_app_count');
-                if (saved) setPracticeCount(parseInt(saved));
-                generateAll();
-            }, [config.mode]);
-
-            const generateNum = (digits) => {
-                const min = Math.pow(10, digits - 1);
-                const max = Math.pow(10, digits) - 1;
-                return Math.floor(Math.random() * (max - min + 1)) + min;
-            };
-
-            const generateSingle = (index, currentMode) => {
-                const type = currentMode === 'mix' ? (index < 4 ? 'mul' : 'div') : currentMode;
-                return {
-                    id: Math.random().toString(36).substr(2, 9),
-                    index: index,
-                    label: `第 ${String(index + 1).padStart(2, '0')} 題`,
-                    type: type,
-                    n1: generateNum(config.d1),
-                    n2: generateNum(config.d2),
-                    show: false
-                };
-            };
-
-            const generateAll = () => {
-                const newQs = Array.from({ length: 8 }).map((_, i) => generateSingle(i, config.mode));
-                setQuestions(newQs);
-                const newCount = practiceCount + 1;
-                setPracticeCount(newCount);
-                localStorage.setItem('math_app_count', newCount);
-            };
-
-            const refreshOne = (e, index) => {
-                e.stopPropagation();
-                setQuestions(qs => qs.map((q, i) => i === index ? generateSingle(index, config.mode) : q));
-            };
-
-            const toggleShow = (id) => {
-                setQuestions(qs => qs.map(q => q.id === id ? { ...q, show: !q.show } : q));
-            };
-
-            return (
-                <div className="min-h-screen flex flex-col font-sans">
-                    <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center px-6">
-                        <div className="flex items-center gap-2">
-                            <span className="text-2xl">📖</span>
-                            <h1 className="text-xl font-bold tracking-wider">作業繳交小幫手</h1>
+            questions.forEach((q, index) => {
+                const cardHtml = `
+                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[400px] shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
+                            <span class="text-blue-600 font-bold text-sm bg-blue-50 px-2 py-1 rounded">${q.label}</span>
+                            <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1 rounded transition opacity-0 group-hover:opacity-100" title="更換此題數字">🔄</button>
                         </div>
-                        <div className="text-sm font-medium opacity-80">
-                            累積出題次數：{practiceCount}
+                        
+                        <div class="text-xs text-gray-400 text-center mb-2">
+                            ${q.type === 'mul' ? '乘法直式' : '除法直式'} (點擊看詳解)
                         </div>
-                    </header>
-
-                    <main className="max-w-7xl mx-auto w-full p-6 flex-1 flex flex-col gap-6">
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 items-center justify-between">
-                            <div className="flex flex-wrap gap-6 items-center">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-gray-600 font-bold">題型：</span>
-                                    <select 
-                                        className="border border-gray-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={config.mode}
-                                        onChange={(e) => setConfig({...config, mode: e.target.value})}
-                                    >
-                                        <option value="mix">混合模式 (乘除各半)</option>
-                                        <option value="mul">純乘法練習</option>
-                                        <option value="div">純除法練習</option>
-                                    </select>
-                                </div>
-                                <div className="flex items-center gap-2 text-gray-600 font-bold">
-                                    位數：
-                                    <select className="border rounded px-2 py-1" value={config.d1} onChange={e => setConfig({...config, d1: parseInt(e.target.value)})}>
-                                        <option value={3}>3位</option><option value={4}>4位</option><option value={5}>5位</option>
-                                    </select>
-                                    <span className="text-lg mx-1">÷/×</span>
-                                    <select className="border rounded px-2 py-1" value={config.d2} onChange={e => setConfig({...config, d2: parseInt(e.target.value)})}>
-                                        <option value={1}>1位</option><option value={2}>2位</option><option value={3}>3位</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button onClick={generateAll} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
-                                ＋ 新增作業 (8題)
-                            </button>
+                        
+                        <div class="flex-1 flex justify-center w-full">
+                            ${q.type === 'mul' ? getMulHtml(q.n1, q.n2, q.show) : getDivHtml(q.n1, q.n2, q.show)}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {questions.map((q, idx) => (
-                                <div 
-                                    key={q.id}
-                                    onClick={() => toggleShow(q.id)}
-                                    className="bg-white border border-gray-200 rounded-xl p-5 min-h-[400px] shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative group"
-                                >
-                                    <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
-                                        <span className="text-blue-600 font-bold text-sm bg-blue-50 px-2 py-1 rounded">
-                                            {q.label}
-                                        </span>
-                                        <button 
-                                            onClick={(e) => refreshOne(e, idx)}
-                                            className="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1 rounded transition opacity-0 group-hover:opacity-100"
-                                            title="更換此題數字"
-                                        >
-                                            🔄
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="text-xs text-gray-400 text-center mb-2">
-                                        {q.type === 'mul' ? '乘法直式' : '除法直式'} (點擊看詳解)
-                                    </div>
-                                    
-                                    <div className="flex-1 flex justify-center">
-                                        <MathDetail {...q} />
-                                    </div>
-
-                                    <div className={`mt-4 pt-3 border-t border-gray-50 text-center text-red-500 font-bold text-lg transition-opacity ${q.show ? 'opacity-100' : 'opacity-0'}`}>
-                                        {q.type === 'mul' ? `＝ ${q.n1*q.n2}` : `商：${Math.floor(q.n1/q.n2)}`}
-                                    </div>
-                                </div>
-                            ))}
+                        <div class="mt-4 pt-3 border-t border-gray-50 text-center text-red-500 font-bold text-lg ${q.show ? 'opacity-100' : 'opacity-0'} transition-opacity">
+                            ${q.type === 'mul' ? `＝ ${q.n1 * q.n2}` : `商：${Math.floor(q.n1 / q.n2)}`}
                         </div>
-                    </main>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
     </script>
 </body>
 </html>
