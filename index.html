@@ -239,3 +239,100 @@
             }
             
             if (validSteps > 1) {
+                detail += "-".repeat(width) + "\n";
+                detail += `<span class="text-red-500 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
+            } else {
+                detail += `<span class="text-red-500 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
+            }
+
+            return `<div class="math-font">${out}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-500">${detail}</div></div>`;
+        }
+
+        function buildDivHTML(n1, n2, show) {
+            const q = Math.floor(n1 / n2).toString();
+            const n1Str = n1.toString();
+            const n2Str = n2.toString();
+            const preLen = n2Str.length + 3; 
+            
+            let outTop = "";
+            const qPad = preLen + n1Str.length - q.length;
+            outTop += `<div class="${show ? 'opacity-100' : 'opacity-0'} text-red-500 font-bold transition-opacity">` + " ".repeat(qPad) + q + "</div>";
+            
+            let outBase = "";
+            outBase += " ".repeat(preLen) + "-".repeat(n1Str.length) + "\n";
+            outBase += n2Str + " ) " + n1Str + "\n";
+            
+            let detail = "";
+            let cv = "";
+            let stepsCount = 0;
+            
+            for (let i = 0; i < n1Str.length; i++) {
+                cv += n1Str[i];
+                let cvNum = parseInt(cv, 10);
+                
+                if (cvNum >= n2 || (i === n1Str.length - 1 && stepsCount > 0)) {
+                    let sub = Math.floor(cvNum / n2) * n2;
+                    if (sub > 0 || i === n1Str.length - 1) {
+                        let subStr = sub.toString();
+                        if (sub > 0) {
+                            let subPad = preLen + i + 1 - subStr.length;
+                            detail += " ".repeat(subPad) + subStr + "\n";
+                            
+                            let dashLen = Math.max(cv.length, subStr.length);
+                            let dashPad = preLen + i + 1 - dashLen;
+                            detail += " ".repeat(dashPad) + "-".repeat(dashLen) + "\n";
+                            
+                            cv = (cvNum - sub).toString();
+                            if (cv === "0") cv = ""; 
+                        }
+                        
+                        if (i < n1Str.length - 1) {
+                            let displayCv = cv + n1Str[i+1];
+                            let dropPad = preLen + i + 2 - displayCv.length;
+                            detail += " ".repeat(dropPad) + displayCv + "\n";
+                            stepsCount++;
+                        } else {
+                            let displayCv = cv === "" ? "0" : cv;
+                            let remPad = preLen + i + 1 - displayCv.length;
+                            detail += " ".repeat(remPad) + displayCv + "\n";
+                        }
+                    }
+                } else if (i < n1Str.length - 1 && stepsCount > 0) {
+                     let displayCv = parseInt(cv + n1Str[i+1], 10).toString(); 
+                     let dropPad = preLen + i + 2 - displayCv.length;
+                     detail += " ".repeat(dropPad) + displayCv + "\n";
+                }
+            }
+
+            return `<div class="math-font">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-500">${detail}</div></div>`;
+        }
+
+        function renderAll() {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = '';
+
+            questions.forEach((q, index) => {
+                const mathContent = q.type === 'mul' ? buildMulHTML(q.n1, q.n2, q.show) : buildDivHTML(q.n1, q.n2, q.show);
+                
+                const cardHtml = `
+                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[380px] shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
+                            <span class="text-blue-600 font-bold text-sm bg-blue-50 border border-blue-100 px-2 py-1 rounded shadow-sm">${q.label}</span>
+                            <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100" title="單獨更換此題">🔄</button>
+                        </div>
+                        
+                        <div class="flex-1 flex justify-center w-full">
+                            ${mathContent}
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
+                            點擊卡片空白處顯示 / 隱藏詳解 (含進位流程)
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
+    </script>
+</body>
+</html>
