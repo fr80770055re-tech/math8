@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* 等寬字體與對齊：移除影響對齊的小字體設定，統一字距 */
         .math-font { 
             font-family: 'Courier New', Courier, monospace; 
             font-size: 1.3rem; 
@@ -176,18 +175,14 @@
             renderAll();
         }
 
-        // ================= 全新修正的完美對齊演算法 =================
+        // ================= 進位移至頂部的對齊演算法 =================
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
             const ansStr = (n1 * n2).toString();
             const width = Math.max(n1Str.length, n2Str.length + 2, ansStr.length);
             
-            let out = "";
-            out += " ".repeat(width - n1Str.length) + n1Str + "\n";
-            out += " ".repeat(width - n2Str.length - 2) + "× " + n2Str + "\n";
-            out += "-".repeat(width) + "\n";
-            
+            let carryHTML = "";
             let detail = "";
             const s2 = n2Str.split('').reverse();
             let validSteps = 0;
@@ -198,14 +193,13 @@
                     const product = n1 * digitB;
                     const prodStr = product.toString();
                     
-                    // 1. 建立一個長度與 n1Str 相同的陣列，精準記錄每個位數產生的進位
+                    // 1. 計算頂部進位列
                     let carryArr = new Array(n1Str.length).fill(" ");
                     let currentCarry = 0;
                     for (let k = n1Str.length - 1; k >= 0; k--) {
                         let digitA = parseInt(n1Str[k]);
                         let prod = digitA * digitB + currentCarry;
                         let nextCarry = Math.floor(prod / 10);
-                        // 進位應該寫在被乘數的「下一個較高位數」上方
                         if (k - 1 >= 0 && nextCarry > 0) {
                             carryArr[k - 1] = nextCarry.toString();
                         }
@@ -213,21 +207,26 @@
                     }
                     let carryStr = carryArr.join('');
                     
-                    // 2. 只有當存在進位時，才印出進位行
                     if (carryStr.trim().length > 0) {
-                       // 配合目前的乘數層級 (i)，將進位字串向左推移
-                       let shiftedCarryStr = carryStr + " ".repeat(i);
-                       let leftPad = width - shiftedCarryStr.length;
-                       // 使用與數字完全相同的字體大小，僅改變顏色與粗細，保證 100% 對齊
-                       detail += `<span class="text-red-500 font-bold">` + " ".repeat(Math.max(0, leftPad)) + shiftedCarryStr + `</span>\n`;
+                       // 讓進位與被乘數對齊，並將每一次的進位列「向上堆疊」(prepend)
+                       let padLeft = width - n1Str.length;
+                       carryHTML = `<div class="text-red-500 font-bold">` + " ".repeat(Math.max(0, padLeft)) + carryStr + `</div>` + carryHTML;
                     }
                     
-                    // 3. 印出中間乘積
+                    // 2. 紀錄中間乘積
                     const padLeft = width - i - prodStr.length;
                     detail += " ".repeat(Math.max(0, padLeft)) + prodStr + " ".repeat(i) + "\n";
                     validSteps++;
                 }
             }
+            
+            // 3. 組合 HTML：先放頂部進位，再放原題目，最後放中間計算過程
+            let carryContainer = carryHTML !== "" ? `<div class="${show ? 'detail-show' : 'detail-hidden'}">${carryHTML}</div>` : "";
+            
+            let baseMath = `<div>` + 
+                           " ".repeat(width - n1Str.length) + n1Str + "\n" +
+                           " ".repeat(width - n2Str.length - 2) + "× " + n2Str + "\n" +
+                           "-".repeat(width) + `</div>`;
             
             if (validSteps > 1) {
                 detail += "-".repeat(width) + "\n";
@@ -236,7 +235,7 @@
                 detail += `<span class="text-blue-600 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
             }
 
-            return `<div class="math-font">${out}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>`;
+            return `<div class="math-font flex flex-col items-center w-full px-4"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div></div>`;
         }
 
         function buildDivHTML(n1, n2, show) {
@@ -295,7 +294,7 @@
                 }
             }
 
-            return `<div class="math-font">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>`;
+            return `<div class="math-font flex flex-col items-center w-full px-4"><div class="text-left">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div></div>`;
         }
 
         function renderAll() {
@@ -317,7 +316,7 @@
                         </div>
 
                         <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
-                            點擊卡片空白處顯示 / 隱藏詳解 (含精準進位)
+                            點擊卡片空白處顯示 / 隱藏詳解 (頂部進位)
                         </div>
                     </div>
                 `;
