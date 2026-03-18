@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* 核心關鍵：使用等寬字體並保留所有空白，保證 100% 完美對齊 */
+        /* 等寬字體與對齊 */
         .math-font { 
             font-family: 'Courier New', Courier, monospace; 
             font-size: 1.3rem; 
@@ -24,6 +24,14 @@
         @keyframes fadeIn {
             0% { opacity: 0; transform: translateY(-5px); }
             100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 進位字體樣式 */
+        .carry-font {
+            font-size: 0.8rem;
+            color: #d9534f;
+            line-height: 1;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -98,7 +106,7 @@
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
-        // ================= 核心邏輯：出題與存檔 =================
+        // ================= 出題與存檔邏輯 =================
         function generateAll() {
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
@@ -135,43 +143,38 @@
             renderAll();
         }
 
-        // 儲存當下題目快照 (Snapshot)
         function saveCurrentToHistory() {
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
-            // 複製一份當前的題目陣列
             const record = {
                 id: Date.now(),
                 time: timeStr,
                 data: JSON.parse(JSON.stringify(questions))
             };
             
-            historyRecords.unshift(record); // 把新紀錄放最前面
-            if (historyRecords.length > 8) historyRecords.pop(); // 最多保留 8 組
+            historyRecords.unshift(record);
+            if (historyRecords.length > 8) historyRecords.pop();
             
             localStorage.setItem('math_snapshots', JSON.stringify(historyRecords));
             renderHistory();
         }
 
-        // 讀取歷史存檔
         function loadHistory(id) {
             const record = historyRecords.find(r => r.id === id);
             if (record) {
-                // 強制將所有題目的詳解收起
                 questions = JSON.parse(JSON.stringify(record.data)).map(q => ({...q, show: false}));
                 renderAll();
             }
         }
 
-        // 渲染存檔按鈕
         function renderHistory() {
             const container = document.getElementById('historyContainer');
             if (historyRecords.length === 0) {
                 container.innerHTML = '<span class="text-indigo-300 text-sm">尚無存檔</span>';
                 return;
             }
-            container.innerHTML = historyRecords.map((r, i) => `
+            container.innerHTML = historyRecords.map((r) => `
                 <button onclick="loadHistory(${r.id})" class="text-xs bg-white text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-full hover:bg-indigo-600 hover:text-white transition shadow-sm font-bold">
                     🕒 ${r.time} 紀錄
                 </button>
@@ -183,14 +186,12 @@
             renderAll();
         }
 
-        // ================= 核心演算法：完美文字排版 =================
-        
-        // 乘法完美對齊
+        // ================= 排版與進位邏輯 =================
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
             const ansStr = (n1 * n2).toString();
-            const width = Math.max(n1Str.length, n2Str.length + 2, ansStr.length); // 計算總寬度
+            const width = Math.max(n1Str.length, n2Str.length + 2, ansStr.length);
             
             let out = "";
             out += " ".repeat(width - n1Str.length) + n1Str + "\n";
@@ -200,112 +201,41 @@
             let detail = "";
             const s2 = n2Str.split('').reverse();
             let validSteps = 0;
+            
             for(let i=0; i<s2.length; i++) {
                 if(s2[i] !== '0') {
-                    let partStr = (n1 * parseInt(s2[i])).toString();
-                    let padLeft = width - i - partStr.length; // 計算前面要補幾個空白
-                    detail += " ".repeat(padLeft) + partStr + " ".repeat(i) + "\n";
+                    const digitB = parseInt(s2[i]);
+                    const product = n1 * digitB;
+                    const prodStr = product.toString();
+                    
+                    let carryStr = "";
+                    let currentCarry = 0;
+                    const s1 = n1Str.split('').reverse();
+                    for (let j = 0; j < s1.length; j++) {
+                        const digitA = parseInt(s1[j]);
+                        const currentProd = digitA * digitB + currentCarry;
+                        if (j < s1.length - 1) {
+                           const carry = Math.floor(currentProd / 10);
+                           if (carry > 0) {
+                              carryStr = carry + carryStr;
+                           } else if (currentCarry > 0 || carryStr.length > 0) {
+                              carryStr = " " + carryStr;
+                           }
+                        }
+                        currentCarry = Math.floor(currentProd / 10);
+                    }
+                    
+                    if (carryStr.length > 0) {
+                       const carryPad = width - i - n1Str.length; 
+                       detail += `<span class="carry-font">` + " ".repeat(carryPad + n1Str.length - carryStr.length) + carryStr + `</span>` + " ".repeat(i) + "\n";
+                    } else {
+                       detail += "\n"; 
+                    }
+                    
+                    const padLeft = width - i - prodStr.length;
+                    detail += " ".repeat(padLeft) + prodStr + " ".repeat(i) + "\n";
                     validSteps++;
                 }
             }
             
             if (validSteps > 1) {
-                detail += "-".repeat(width) + "\n";
-                detail += `<span class="text-red-500 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
-            } else {
-                detail += `<span class="text-red-500 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
-            }
-
-            return `<div class="math-font">${out}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-500">${detail}</div></div>`;
-        }
-
-        // 除法逐位扣減完美對齊
-        function buildDivHTML(n1, n2, show) {
-            const q = Math.floor(n1 / n2).toString();
-            const n1Str = n1.toString();
-            const n2Str = n2.toString();
-            const preLen = n2Str.length + 3; // "3 ) " 的長度
-            
-            let outTop = "";
-            const qPad = preLen + n1Str.length - q.length;
-            outTop += `<div class="${show ? 'opacity-100' : 'opacity-0'} text-red-500 font-bold transition-opacity">` + " ".repeat(qPad) + q + "</div>";
-            
-            let outBase = "";
-            outBase += " ".repeat(preLen) + "-".repeat(n1Str.length) + "\n";
-            outBase += n2Str + " ) " + n1Str + "\n";
-            
-            let detail = "";
-            let cv = "";
-            let stepsCount = 0;
-            
-            for (let i = 0; i < n1Str.length; i++) {
-                cv += n1Str[i];
-                let cvNum = parseInt(cv, 10);
-                
-                if (cvNum >= n2 || (i === n1Str.length - 1 && stepsCount > 0)) {
-                    let sub = Math.floor(cvNum / n2) * n2;
-                    if (sub > 0 || i === n1Str.length - 1) {
-                        let subStr = sub.toString();
-                        if (sub > 0) {
-                            let subPad = preLen + i + 1 - subStr.length;
-                            detail += " ".repeat(subPad) + subStr + "\n";
-                            
-                            let dashLen = Math.max(cv.length, subStr.length);
-                            let dashPad = preLen + i + 1 - dashLen;
-                            detail += " ".repeat(dashPad) + "-".repeat(dashLen) + "\n";
-                            
-                            cv = (cvNum - sub).toString();
-                            if (cv === "0") cv = ""; 
-                        }
-                        
-                        if (i < n1Str.length - 1) {
-                            let displayCv = cv + n1Str[i+1];
-                            let dropPad = preLen + i + 2 - displayCv.length;
-                            detail += " ".repeat(dropPad) + displayCv + "\n";
-                            stepsCount++;
-                        } else {
-                            let displayCv = cv === "" ? "0" : cv;
-                            let remPad = preLen + i + 1 - displayCv.length;
-                            detail += " ".repeat(remPad) + displayCv + "\n";
-                        }
-                    }
-                } else if (i < n1Str.length - 1 && stepsCount > 0) {
-                     let displayCv = parseInt(cv + n1Str[i+1], 10).toString(); 
-                     let dropPad = preLen + i + 2 - displayCv.length;
-                     detail += " ".repeat(dropPad) + displayCv + "\n";
-                }
-            }
-
-            return `<div class="math-font">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-500">${detail}</div></div>`;
-        }
-
-        // ================= 渲染畫面 =================
-        function renderAll() {
-            const container = document.getElementById('quizContainer');
-            container.innerHTML = '';
-
-            questions.forEach((q, index) => {
-                const mathContent = q.type === 'mul' ? buildMulHTML(q.n1, q.n2, q.show) : buildDivHTML(q.n1, q.n2, q.show);
-                
-                const cardHtml = `
-                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[380px] shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
-                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
-                            <span class="text-blue-600 font-bold text-sm bg-blue-50 border border-blue-100 px-2 py-1 rounded shadow-sm">${q.label}</span>
-                            <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100" title="單獨更換此題">🔄</button>
-                        </div>
-                        
-                        <div class="flex-1 flex justify-center w-full">
-                            ${mathContent}
-                        </div>
-
-                        <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
-                            點擊卡片空白處顯示 / 隱藏詳解
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += cardHtml;
-            });
-        }
-    </script>
-</body>
-</html>
