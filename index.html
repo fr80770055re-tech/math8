@@ -59,6 +59,10 @@
                         <option value="1">1位</option><option value="2" selected>2位</option><option value="3">3位</option>
                     </select>
                 </div>
+                <div class="flex items-center gap-2 text-blue-700 font-bold bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 shadow-sm cursor-pointer hover:bg-blue-100 transition">
+                    <input type="checkbox" id="zeroCheck" class="w-4 h-4 cursor-pointer accent-blue-600">
+                    <label for="zeroCheck" class="cursor-pointer select-none">尾數含 0 (速算練習)</label>
+                </div>
             </div>
             <button onclick="generateAll()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
                 ＋ 重新出題 (8題)
@@ -90,23 +94,42 @@
             generateAll();
         }
 
+        // 產生一般隨機數字
         function generateNum(digits) {
+            if (digits <= 0) return 0;
             const min = Math.pow(10, digits - 1);
             const max = Math.pow(10, digits) - 1;
             return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // 新增：產生尾數含 0 的隨機數字
+        function getTrailingZeroNum(digits) {
+            if (digits === 1) return generateNum(1); // 1位數不強求尾數0
+            
+            // 決定要產生幾個 0 (最多為總位數減1，例如3位數最多2個0)
+            const maxZeros = digits - 1;
+            // 隨機決定 1 或 2 個 0，增加題目變化性
+            const zeroCount = Math.floor(Math.random() * Math.min(2, maxZeros)) + 1; 
+            const baseDigits = digits - zeroCount;
+            
+            return generateNum(baseDigits) * Math.pow(10, zeroCount);
         }
 
         function generateAll() {
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
             const d2 = parseInt(document.getElementById('d2Select').value);
+            const isZeroMode = document.getElementById('zeroCheck').checked; // 讀取是否勾選
 
             questions = [];
             for (let i = 0; i < 8; i++) {
                 const type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
                 questions.push({
                     id: Math.random().toString(36).substring(2, 9),
-                    type: type, n1: generateNum(d1), n2: generateNum(d2), show: false,
+                    type: type, 
+                    n1: isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1), 
+                    n2: isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2), 
+                    show: false,
                     label: `第 ${String(i + 1).padStart(2, '0')} 題`
                 });
             }
@@ -122,11 +145,15 @@
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
             const d2 = parseInt(document.getElementById('d2Select').value);
+            const isZeroMode = document.getElementById('zeroCheck').checked; // 讀取是否勾選
             const type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
 
             questions[index] = {
                 id: Math.random().toString(36).substring(2, 9),
-                type: type, n1: generateNum(d1), n2: generateNum(d2), show: false,
+                type: type, 
+                n1: isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1), 
+                n2: isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2), 
+                show: false,
                 label: `第 ${String(index + 1).padStart(2, '0')} 題`
             };
             renderAll();
@@ -175,7 +202,7 @@
             renderAll();
         }
 
-        // ================= 進位移至頂部的對齊演算法 =================
+        // ================= 直式排版與進位對齊演算法 =================
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
@@ -193,7 +220,6 @@
                     const product = n1 * digitB;
                     const prodStr = product.toString();
                     
-                    // 1. 計算頂部進位列
                     let carryArr = new Array(n1Str.length).fill(" ");
                     let currentCarry = 0;
                     for (let k = n1Str.length - 1; k >= 0; k--) {
@@ -208,19 +234,16 @@
                     let carryStr = carryArr.join('');
                     
                     if (carryStr.trim().length > 0) {
-                       // 讓進位與被乘數對齊，並將每一次的進位列「向上堆疊」(prepend)
                        let padLeft = width - n1Str.length;
                        carryHTML = `<div class="text-red-500 font-bold">` + " ".repeat(Math.max(0, padLeft)) + carryStr + `</div>` + carryHTML;
                     }
                     
-                    // 2. 紀錄中間乘積
                     const padLeft = width - i - prodStr.length;
                     detail += " ".repeat(Math.max(0, padLeft)) + prodStr + " ".repeat(i) + "\n";
                     validSteps++;
                 }
             }
             
-            // 3. 組合 HTML：先放頂部進位，再放原題目，最後放中間計算過程
             let carryContainer = carryHTML !== "" ? `<div class="${show ? 'detail-show' : 'detail-hidden'}">${carryHTML}</div>` : "";
             
             let baseMath = `<div>` + 
@@ -316,7 +339,7 @@
                         </div>
 
                         <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
-                            點擊卡片空白處顯示 / 隱藏詳解 (頂部進位)
+                            點擊卡片顯示詳解
                         </div>
                     </div>
                 `;
