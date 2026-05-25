@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>作業繳交小幫手 - 數學出題</title>
+    <title>作業繳交小幫手 - 綜合數學出題</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -44,12 +44,14 @@
                 <div class="flex items-center gap-2">
                     <span class="text-gray-600 font-bold">題型：</span>
                     <select id="modeSelect" class="border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="mix">混合模式 (乘除各半)</option>
-                        <option value="mul">純乘法練習</option>
-                        <option value="div">純除法練習</option>
+                        <option value="mix">基礎直式：混合模式 (乘除各半)</option>
+                        <option value="mul">基礎直式：純乘法練習</option>
+                        <option value="div">基礎直式：純除法練習</option>
+                        <option value="simplify">特別單元：純簡化計算 (加/乘湊整)</option>
+                        <option value="time">特別單元：純時間換算 (日時分秒)</option>
                     </select>
                 </div>
-                <div class="flex items-center gap-2 text-gray-600 font-bold">
+                <div id="digitSettings" class="flex items-center gap-2 text-gray-600 font-bold">
                     位數：
                     <select id="d1Select" class="border rounded px-2 py-1">
                         <option value="3">3位</option><option value="4">4位</option><option value="5">5位</option>
@@ -59,7 +61,7 @@
                         <option value="1">1位</option><option value="2" selected>2位</option><option value="3">3位</option>
                     </select>
                 </div>
-                <div class="flex items-center gap-2 text-blue-700 font-bold bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 shadow-sm cursor-pointer hover:bg-blue-100 transition">
+                <div id="zeroSettings" class="flex items-center gap-2 text-blue-700 font-bold bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 shadow-sm cursor-pointer hover:bg-blue-100 transition">
                     <input type="checkbox" id="zeroCheck" class="w-4 h-4 cursor-pointer accent-blue-600">
                     <label for="zeroCheck" class="cursor-pointer select-none">尾數含 0 (速算練習)</label>
                 </div>
@@ -90,11 +92,24 @@
 
         function initApp() {
             document.getElementById('countDisplay').innerText = `累積出題：${practiceCount} 次`;
+            
+            // 當題型切換時，自動顯示/隱藏不相關的設定欄位
+            document.getElementById('modeSelect').addEventListener('change', function(e) {
+                const val = e.target.value;
+                if (val === 'simplify' || val === 'time') {
+                    document.getElementById('digitSettings').style.display = 'none';
+                    document.getElementById('zeroSettings').style.display = 'none';
+                } else {
+                    document.getElementById('digitSettings').style.display = 'flex';
+                    document.getElementById('zeroSettings').style.display = 'flex';
+                }
+                generateAll();
+            });
+
             renderHistory();
             generateAll();
         }
 
-        // 產生一般隨機數字
         function generateNum(digits) {
             if (digits <= 0) return 0;
             const min = Math.pow(10, digits - 1);
@@ -102,36 +117,65 @@
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
-        // 新增：產生尾數含 0 的隨機數字
         function getTrailingZeroNum(digits) {
-            if (digits === 1) return generateNum(1); // 1位數不強求尾數0
-            
-            // 決定要產生幾個 0 (最多為總位數減1，例如3位數最多2個0)
+            if (digits === 1) return generateNum(1);
             const maxZeros = digits - 1;
-            // 隨機決定 1 或 2 個 0，增加題目變化性
             const zeroCount = Math.floor(Math.random() * Math.min(2, maxZeros)) + 1; 
             const baseDigits = digits - zeroCount;
-            
             return generateNum(baseDigits) * Math.pow(10, zeroCount);
         }
 
+        // ================= 出題核心邏輯 =================
         function generateAll() {
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
             const d2 = parseInt(document.getElementById('d2Select').value);
-            const isZeroMode = document.getElementById('zeroCheck').checked; // 讀取是否勾選
+            const isZeroMode = document.getElementById('zeroCheck').checked;
 
             questions = [];
             for (let i = 0; i < 8; i++) {
-                const type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
-                questions.push({
+                let qData = {
                     id: Math.random().toString(36).substring(2, 9),
-                    type: type, 
-                    n1: isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1), 
-                    n2: isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2), 
-                    show: false,
-                    label: `第 ${String(i + 1).padStart(2, '0')} 題`
-                });
+                    label: `第 ${String(i + 1).padStart(2, '0')} 題`,
+                    show: false
+                };
+
+                if (mode === 'simplify') {
+                    // 隨機決定出加法還是乘法簡化
+                    qData.type = 'simplify';
+                    qData.subType = Math.random() > 0.5 ? 'add' : 'mul';
+                    if (qData.subType === 'add') {
+                        // 加法湊整 (例如 32 + 58 = 90 或 100)
+                        const target = (Math.floor(Math.random() * 5) + 4) * 10; // 40, 50, 60, 70, 80
+                        const n1 = Math.floor(Math.random() * (target - 15)) + 11;
+                        const n2 = target - n1;
+                        const n3 = Math.floor(Math.random() * 80) + 15;
+                        // 打亂順序
+                        const arr = [n1, n2, n3].sort(() => Math.random() - 0.5);
+                        qData.nums = arr;
+                    } else {
+                        // 乘法湊整 (常見組合：25*4=100, 125*8=1000, 5*20=100)
+                        const pairs = [[25, 4], [125, 8], [5, 20], [50, 2]];
+                        const chosenPair = pairs[Math.floor(Math.random() * pairs.length)];
+                        const n3 = Math.floor(Math.random() * 50) + 11;
+                        const arr = [chosenPair[0], chosenPair[1], n3].sort(() => Math.random() - 0.5);
+                        qData.nums = arr;
+                    }
+                } else if (mode === 'time') {
+                    qData.type = 'time';
+                    // 隨機決定時間換算方向
+                    const directions = ['day_to_hour', 'hour_to_day', 'hour_to_min', 'min_to_hour', 'min_to_sec', 'sec_to_min'];
+                    qData.subType = directions[Math.floor(Math.random() * directions.length)];
+                    qData.val = Math.floor(Math.random() * 150) + 5; // 基本隨機值
+                    if (qData.subType.includes('day')) qData.val = Math.floor(Math.random() * 8) + 2; // 天數不要太大
+                } else {
+                    // 常規直式乘除法
+                    qData.type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
+                    qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
+                    qData.n2 = isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2);
+                }
+
+                questions.push(qData);
             }
 
             practiceCount++;
@@ -145,33 +189,52 @@
             const mode = document.getElementById('modeSelect').value;
             const d1 = parseInt(document.getElementById('d1Select').value);
             const d2 = parseInt(document.getElementById('d2Select').value);
-            const isZeroMode = document.getElementById('zeroCheck').checked; // 讀取是否勾選
-            const type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
+            const isZeroMode = document.getElementById('zeroCheck').checked;
 
-            questions[index] = {
+            let qData = {
                 id: Math.random().toString(36).substring(2, 9),
-                type: type, 
-                n1: isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1), 
-                n2: isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2), 
-                show: false,
-                label: `第 ${String(index + 1).padStart(2, '0')} 題`
+                label: `第 ${String(index + 1).padStart(2, '0')} 題`,
+                show: false
             };
+
+            if (mode === 'simplify') {
+                qData.type = 'simplify';
+                qData.subType = Math.random() > 0.5 ? 'add' : 'mul';
+                if (qData.subType === 'add') {
+                    const target = (Math.floor(Math.random() * 5) + 4) * 10;
+                    const n1 = Math.floor(Math.random() * (target - 15)) + 11;
+                    const n2 = target - n1;
+                    const n3 = Math.floor(Math.random() * 80) + 15;
+                    qData.nums = [n1, n2, n3].sort(() => Math.random() - 0.5);
+                } else {
+                    const pairs = [[25, 4], [125, 8], [5, 20], [50, 2]];
+                    const chosenPair = pairs[Math.floor(Math.random() * pairs.length)];
+                    const n3 = Math.floor(Math.random() * 50) + 11;
+                    qData.nums = [chosenPair[0], chosenPair[1], n3].sort(() => Math.random() - 0.5);
+                }
+            } else if (mode === 'time') {
+                qData.type = 'time';
+                const directions = ['day_to_hour', 'hour_to_day', 'hour_to_min', 'min_to_hour', 'min_to_sec', 'sec_to_min'];
+                qData.subType = directions[Math.floor(Math.random() * directions.length)];
+                qData.val = Math.floor(Math.random() * 150) + 5;
+                if (qData.subType.includes('day')) qData.val = Math.floor(Math.random() * 8) + 2;
+            } else {
+                qData.type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
+                qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
+                qData.n2 = isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2);
+            }
+
+            questions[index] = qData;
             renderAll();
         }
 
+        // ================= 歷史紀錄處理 =================
         function saveCurrentToHistory() {
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            
-            const record = {
-                id: Date.now(),
-                time: timeStr,
-                data: JSON.parse(JSON.stringify(questions))
-            };
-            
+            const record = { id: Date.now(), time: timeStr, data: JSON.parse(JSON.stringify(questions)) };
             historyRecords.unshift(record);
             if (historyRecords.length > 8) historyRecords.pop();
-            
             localStorage.setItem('math_snapshots', JSON.stringify(historyRecords));
             renderHistory();
         }
@@ -202,13 +265,139 @@
             renderAll();
         }
 
-        // ================= 直式排版與進位對齊演算法 =================
+        function countTrailingZeros(num) {
+            const str = num.toString();
+            const match = str.match(/0+$/);
+            return match ? match[0].length : 0;
+        }
+
+        // ================= 各題型 HTML 渲染引擎 =================
+
+        // 1. 簡化計算單元
+        function buildSimplifyHTML(q, show) {
+            const nums = q.nums;
+            let titleText = "";
+            let stepHtml = "";
+            let finalAns = 0;
+
+            if (q.subType === 'add') {
+                titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${nums[0]} ＋ ${nums[1]} ＋ ${nums[2]} ＝ ？</div>`;
+                // 找出哪兩個相加尾數是 0
+                let p1 = 0, p2 = 1, p3 = 2;
+                if ((nums[0] + nums[1]) % 10 === 0) { p1 = 0; p2 = 1; p3 = 2; }
+                else if ((nums[0] + nums[2]) % 10 === 0) { p1 = 0; p2 = 2; p3 = 1; }
+                else { p1 = 1; p2 = 2; p3 = 0; }
+                
+                finalAns = nums[0] + nums[1] + nums[2];
+                stepHtml = `
+                    <div class="text-sm text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
+                        <span class="text-red-600 font-bold">💡 湊整想法：</span><br>
+                        觀察尾數發現：<br>
+                        <span class="underline">${nums[p1]} ＋ ${nums[p2]} ＝ ${nums[p1] + nums[p2]}</span> (好算！)<br>
+                        接下來再算：<br>
+                        ${nums[p1] + nums[p2]} ＋ ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>
+                    </div>`;
+            } else {
+                titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${nums[0]} × ${nums[1]} × ${nums[2]} ＝ ？</div>`;
+                // 找出乘法黃金拍檔
+                let p1 = 0, p2 = 1, p3 = 2;
+                const checkPair = (a, b) => (a*b===100 || a*b===1000 || a*b===10 || a*b===40);
+                if (checkPair(nums[0], nums[1])) { p1 = 0; p2 = 1; p3 = 2; }
+                else if (checkPair(nums[0], nums[2])) { p1 = 0; p2 = 2; p3 = 1; }
+                else { p1 = 1; p2 = 2; p3 = 0; }
+
+                finalAns = nums[0] * nums[1] * nums[2];
+                stepHtml = `
+                    <div class="text-sm text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
+                        <span class="text-red-600 font-bold">💡 湊整想法：</span><br>
+                        記住乘法好朋友：<br>
+                        <span class="underline">${nums[p1]} × ${nums[p2]} ＝ ${nums[p1] * nums[p2]}</span><br>
+                        接下來再算：<br>
+                        ${nums[p1] * nums[p2]} × ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>
+                    </div>`;
+            }
+
+            return `
+                <div class="w-full flex flex-col items-center">
+                    ${titleText}
+                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">${stepHtml}</div>
+                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${finalAns}</div>
+                </div>`;
+        }
+
+        // 2. 時間換算單元
+        function buildTimeHTML(q, show) {
+            let titleText = "";
+            let stepHtml = "";
+            let finalAnsText = "";
+
+            switch (q.subType) {
+                case 'day_to_hour':
+                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 日 ＝ (  ) 小時</div>`;
+                    finalAnsText = `${q.val * 24} 小時`;
+                    stepHtml = `💡 想法：1日是 24 小時。<br>${q.val}日就是有 ${q.val} 個 24。<br>算式：<span class="font-mono font-bold">24 × ${q.val} ＝ ${q.val * 24}</span>`;
+                    break;
+                case 'hour_to_day':
+                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 小時 ＝ (  )日(  )小時</div>`;
+                    const d = Math.floor(q.val / 24);
+                    const h = q.val % 24;
+                    finalAnsText = `${d} 日 ${h} 小時`;
+                    stepHtml = `💡 想法：每 24 小時可以換成 1 日。<br>算式：<span class="font-mono font-bold">${q.val} ÷ 24 ＝ ${d} ... ${h}</span><br>商代表【日】，餘數代表【小時】。`;
+                    break;
+                case 'hour_to_min':
+                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 小時 ＝ (  ) 分鐘</div>`;
+                    finalAnsText = `${q.val * 60} 分鐘`;
+                    stepHtml = `💡 想法：1 小時是 60 分鐘。<br>${q.val}小時就是 ${q.val} 個 60。<br>算式：<span class="font-mono font-bold">60 × ${q.val} ＝ ${q.val * 60}</span>`;
+                    break;
+                case 'min_to_hour':
+                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 分鐘 ＝ (  )小時(  )分鐘</div>`;
+                    const th = Math.floor(q.val / 60);
+                    const tm = q.val % 60;
+                    finalAnsText = `${th} 小時 ${tm} 分鐘`;
+                    stepHtml = `💡 想法：每 60 分鐘可以換成 1 小時。<br>算式：<span class="font-mono font-bold">${q.val} ÷ 60 ＝ ${th} ... ${tm}</span><br>商代表【小時】，餘數代表【分鐘】。`;
+                    break;
+                case 'min_to_sec':
+                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 分鐘 ＝ (  ) 秒</div>`;
+                    finalAnsText = `${q.val * 60} 秒`;
+                    stepHtml = `💡 想法：1 分鐘是 60 秒。<br>${q.val}分鐘就是 ${q.val} 個 60。<br>算式：<span class="font-mono font-bold">60 × ${q.val} ＝ ${q.val * 60}</span>`;
+                    break;
+                case 'sec_to_min':
+                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 秒 ＝ (  )分鐘(  )秒</div>`;
+                    const m_min = Math.floor(q.val / 60);
+                    const s_sec = q.val % 60;
+                    finalAnsText = `${m_min} 分鐘 ${s_sec} 秒`;
+                    stepHtml = `💡 想法：每 60 秒可以換成 1 分鐘。<br>算式：<span class="font-mono font-bold">${q.val} ÷ 60 ＝ ${m_min} ... ${s_sec}</span><br>商代表【分鐘】，餘數代表【秒】。`;
+                    break;
+            }
+
+            return `
+                <div class="w-full flex flex-col items-center">
+                    ${titleText}
+                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
+                        <div class="text-sm text-left bg-amber-50 text-amber-950 border border-amber-200 p-3 rounded-lg leading-relaxed font-sans">
+                            ${stepHtml}
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${finalAnsText}</div>
+                </div>`;
+        }
+
+        // 3. 常規直式：乘法
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
             const ansStr = (n1 * n2).toString();
             const width = Math.max(n1Str.length, n2Str.length + 2, ansStr.length);
             
+            const z1 = countTrailingZeros(n1);
+            const z2 = countTrailingZeros(n2);
+            let simplifyTip = "";
+            if (z1 > 0 || z2 > 0) {
+                const sN1 = n1 / Math.pow(10, z1);
+                const sN2 = n2 / Math.pow(10, z2);
+                simplifyTip = `<div class="mt-3 text-xs bg-emerald-50 text-emerald-800 p-2 rounded border border-emerald-100 font-bold whitespace-normal leading-normal">💡 簡化想法：先算 ${sN1} × ${sN2} ＝ ${sN1 * sN2}，最後尾數再補上 ${z1 + z2} 個 0。</div>`;
+            }
+
             let carryHTML = "";
             let detail = "";
             const s2 = n2Str.split('').reverse();
@@ -245,11 +434,7 @@
             }
             
             let carryContainer = carryHTML !== "" ? `<div class="${show ? 'detail-show' : 'detail-hidden'}">${carryHTML}</div>` : "";
-            
-            let baseMath = `<div>` + 
-                           " ".repeat(width - n1Str.length) + n1Str + "\n" +
-                           " ".repeat(width - n2Str.length - 2) + "× " + n2Str + "\n" +
-                           "-".repeat(width) + `</div>`;
+            let baseMath = `<div>` + " ".repeat(width - n1Str.length) + n1Str + "\n" + " ".repeat(width - n2Str.length - 2) + "× " + n2Str + "\n" + "-".repeat(width) + `</div>`;
             
             if (validSteps > 1) {
                 detail += "-".repeat(width) + "\n";
@@ -258,15 +443,29 @@
                 detail += `<span class="text-blue-600 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
             }
 
-            return `<div class="math-font flex flex-col items-center w-full px-4"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div></div>`;
+            return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
         }
 
+        // 4. 常規直式：除法
         function buildDivHTML(n1, n2, show) {
             const q = Math.floor(n1 / n2).toString();
+            const r = n1 % n2;
             const n1Str = n1.toString();
             const n2Str = n2.toString();
             const preLen = n2Str.length + 3; 
             
+            const z1 = countTrailingZeros(n1);
+            const z2 = countTrailingZeros(n2);
+            let simplifyTip = "";
+            if (z1 > 0 && z2 > 0) {
+                const commonZeros = Math.min(z1, z2);
+                const sN1 = n1 / Math.pow(10, commonZeros);
+                const sN2 = n2 / Math.pow(10, commonZeros);
+                const sR = sN1 % sN2;
+                let rTip = r > 0 ? `，簡化餘數 ${sR} 要放大 ${Math.pow(10, commonZeros)} 倍變成實質餘數 ${r}` : "（剛好整除）";
+                simplifyTip = `<div class="mt-3 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-100 font-bold whitespace-normal leading-normal">💡 簡化想法：被除數與除數同時劃掉 ${commonZeros} 個 0，變成算 ${sN1} ÷ ${sN2}${rTip}。</div>`;
+            }
+
             let outTop = "";
             const qPad = preLen + n1Str.length - q.length;
             outTop += `<div class="${show ? 'opacity-100' : 'opacity-0'} text-blue-600 font-bold transition-opacity">` + " ".repeat(qPad) + q + "</div>";
@@ -290,11 +489,9 @@
                         if (sub > 0) {
                             let subPad = preLen + i + 1 - subStr.length;
                             detail += " ".repeat(subPad) + subStr + "\n";
-                            
                             let dashLen = Math.max(cv.length, subStr.length);
                             let dashPad = preLen + i + 1 - dashLen;
                             detail += " ".repeat(dashPad) + "-".repeat(dashLen) + "\n";
-                            
                             cv = (cvNum - sub).toString();
                             if (cv === "0") cv = ""; 
                         }
@@ -317,29 +514,50 @@
                 }
             }
 
-            return `<div class="math-font flex flex-col items-center w-full px-4"><div class="text-left">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div></div>`;
+            if (r > 0) {
+                detail += `\n<span class="text-amber-600 font-bold text-xs"> (餘數為 ${r})</span>`;
+            }
+
+            return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
         }
 
+        // ================= 畫面渲染主引擎 =================
         function renderAll() {
             const container = document.getElementById('quizContainer');
             container.innerHTML = '';
 
             questions.forEach((q, index) => {
-                const mathContent = q.type === 'mul' ? buildMulHTML(q.n1, q.n2, q.show) : buildDivHTML(q.n1, q.n2, q.show);
+                let mathContent = "";
+                let typeLabel = "";
+
+                // 根據不同的題型派發給不同的渲染引擎
+                if (q.type === 'simplify') {
+                    mathContent = buildSimplifyHTML(q, q.show);
+                    typeLabel = q.subType === 'add' ? '加法簡化' : '乘法簡化';
+                } else if (q.type === 'time') {
+                    mathContent = buildTimeHTML(q, q.show);
+                    typeLabel = '時間換算';
+                } else if (q.type === 'mul') {
+                    mathContent = buildMulHTML(q.n1, q.n2, q.show);
+                    typeLabel = '乘法直式';
+                } else if (q.type === 'div') {
+                    mathContent = buildDivHTML(q.n1, q.n2, q.show);
+                    typeLabel = '除法直式';
+                }
                 
                 const cardHtml = `
-                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[400px] shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
+                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[420px] shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
                         <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
-                            <span class="text-blue-600 font-bold text-sm bg-blue-50 border border-blue-100 px-2 py-1 rounded shadow-sm">${q.label}</span>
+                            <span class="text-blue-600 font-bold text-sm bg-blue-50 border border-blue-100 px-2 py-1 rounded shadow-sm">${q.label} [${typeLabel}]</span>
                             <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100" title="單獨更換此題數字">🔄</button>
                         </div>
                         
-                        <div class="flex-1 flex justify-center w-full">
+                        <div class="flex-1 flex justify-center w-full items-start mt-2">
                             ${mathContent}
                         </div>
 
                         <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
-                            點擊卡片顯示詳解
+                            點擊卡片顯示詳細思維解法
                         </div>
                     </div>
                 `;
