@@ -47,8 +47,8 @@
                         <option value="mix">基礎直式：混合模式 (乘除各半)</option>
                         <option value="mul">基礎直式：純乘法練習</option>
                         <option value="div">基礎直式：純除法練習</option>
-                        <option value="simplify">特別單元：純簡化計算 (加/乘湊整)</option>
-                        <option value="time">特別單元：純時間換算 (日時分秒)</option>
+                        <option value="simplify">特別單元：純簡化計算 (含四則/減法湊整)</option>
+                        <option value="time">特別單元：純時間換算 (複名數/日時分秒進退位)</option>
                     </select>
                 </div>
                 <div id="digitSettings" class="flex items-center gap-2 text-gray-600 font-bold">
@@ -93,7 +93,6 @@
         function initApp() {
             document.getElementById('countDisplay').innerText = `累積出題：${practiceCount} 次`;
             
-            // 當題型切換時，自動顯示/隱藏不相關的設定欄位
             document.getElementById('modeSelect').addEventListener('change', function(e) {
                 const val = e.target.value;
                 if (val === 'simplify' || val === 'time') {
@@ -141,35 +140,59 @@
                 };
 
                 if (mode === 'simplify') {
-                    // 隨機決定出加法還是乘法簡化
                     qData.type = 'simplify';
-                    qData.subType = Math.random() > 0.5 ? 'add' : 'mul';
+                    // 隨機決定型態：加法、乘法、或是新增的【減法湊整】
+                    const types = ['add', 'mul', 'sub_two', 'sub_near'];
+                    qData.subType = types[Math.floor(Math.random() * types.length)];
+                    
                     if (qData.subType === 'add') {
-                        // 加法湊整 (例如 32 + 58 = 90 或 100)
-                        const target = (Math.floor(Math.random() * 5) + 4) * 10; // 40, 50, 60, 70, 80
-                        const n1 = Math.floor(Math.random() * (target - 15)) + 11;
+                        const target = (Math.floor(Math.random() * 5) + 5) * 10; 
+                        const n1 = Math.floor(Math.random() * (target - 25)) + 11;
                         const n2 = target - n1;
                         const n3 = Math.floor(Math.random() * 80) + 15;
-                        // 打亂順序
-                        const arr = [n1, n2, n3].sort(() => Math.random() - 0.5);
-                        qData.nums = arr;
-                    } else {
-                        // 乘法湊整 (常見組合：25*4=100, 125*8=1000, 5*20=100)
+                        qData.nums = [n1, n2, n3].sort(() => Math.random() - 0.5);
+                    } else if (qData.subType === 'mul') {
                         const pairs = [[25, 4], [125, 8], [5, 20], [50, 2]];
                         const chosenPair = pairs[Math.floor(Math.random() * pairs.length)];
-                        const n3 = Math.floor(Math.random() * 50) + 11;
-                        const arr = [chosenPair[0], chosenPair[1], n3].sort(() => Math.random() - 0.5);
-                        qData.nums = arr;
+                        const n3 = Math.floor(Math.random() * 40) + 11;
+                        qData.nums = [chosenPair[0], chosenPair[1], n3].sort(() => Math.random() - 0.5);
+                    } else if (qData.subType === 'sub_two') {
+                        // 連減法湊整：A - B - C -> A - (B + C)
+                        const bcTarget = (Math.floor(Math.random() * 4) + 4) * 10; // B+C 湊成 40~70
+                        const b = Math.floor(Math.random() * (bcTarget - 15)) + 11;
+                        const c = bcTarget - b;
+                        const a = bcTarget + Math.floor(Math.random() * 100) + 35; // 確保 A 大於 B+C
+                        qData.nums = [a, b, c]; // 固定順序：A - B - C
+                    } else if (qData.subType === 'sub_near') {
+                        // 接近整百的減法：A - 99 或 A - 98
+                        const subNum = Math.random() > 0.5 ? 99 : 98;
+                        const a = Math.floor(Math.random() * 150) + 120;
+                        qData.nums = [a, subNum];
                     }
                 } else if (mode === 'time') {
                     qData.type = 'time';
-                    // 隨機決定時間換算方向
-                    const directions = ['day_to_hour', 'hour_to_day', 'hour_to_min', 'min_to_hour', 'min_to_sec', 'sec_to_min'];
+                    // 包含單一換算與【複名數換算、未滿一日/時/分】的多元題型
+                    const directions = ['compound_to_small', 'small_to_compound', 'under_one_unit'];
                     qData.subType = directions[Math.floor(Math.random() * directions.length)];
-                    qData.val = Math.floor(Math.random() * 150) + 5; // 基本隨機值
-                    if (qData.subType.includes('day')) qData.val = Math.floor(Math.random() * 8) + 2; // 天數不要太大
+                    
+                    if (qData.subType === 'compound_to_small') {
+                        // 複名數換成單一小單位，例如：2時15分 = ()分
+                        qData.unitPair = Math.random() > 0.5 ? {big: '小時', small: '分鐘', rate: 60} : {big: '分鐘', small: '秒', rate: 60};
+                        if (Math.random() > 0.6) qData.unitPair = {big: '日', small: '小時', rate: 24};
+                        qData.vBig = Math.floor(Math.random() * 5) + 1;
+                        qData.vSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 2;
+                    } else if (qData.subType === 'small_to_compound') {
+                        // 大量小單位換成複名數，例如：135秒 = ()分()秒
+                        qData.unitPair = Math.random() > 0.5 ? {big: '小時', small: '分鐘', rate: 60} : {big: '分鐘', small: '秒', rate: 60};
+                        if (Math.random() > 0.6) qData.unitPair = {big: '日', small: '小時', rate: 24};
+                        qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate * 3)) + (qData.unitPair.rate + 5);
+                    } else {
+                        // 【未滿一日、一時、一分】的特殊除法思維題
+                        qData.unitPair = Math.random() > 0.5 ? {big: '日', small: '小時', rate: 24} : {big: '小時', small: '分鐘', rate: 60};
+                        if (Math.random() > 0.5 && qData.unitPair.big === '日') qData.unitPair = {big: '分鐘', small: '秒', rate: 60};
+                        qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 3; // 刻意讓總數小於進位率
+                    }
                 } else {
-                    // 常規直式乘除法
                     qData.type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
                     qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
                     qData.n2 = isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2);
@@ -199,25 +222,48 @@
 
             if (mode === 'simplify') {
                 qData.type = 'simplify';
-                qData.subType = Math.random() > 0.5 ? 'add' : 'mul';
+                const types = ['add', 'mul', 'sub_two', 'sub_near'];
+                qData.subType = types[Math.floor(Math.random() * types.length)];
                 if (qData.subType === 'add') {
-                    const target = (Math.floor(Math.random() * 5) + 4) * 10;
-                    const n1 = Math.floor(Math.random() * (target - 15)) + 11;
+                    const target = (Math.floor(Math.random() * 5) + 5) * 10;
+                    const n1 = Math.floor(Math.random() * (target - 25)) + 11;
                     const n2 = target - n1;
                     const n3 = Math.floor(Math.random() * 80) + 15;
                     qData.nums = [n1, n2, n3].sort(() => Math.random() - 0.5);
-                } else {
+                } else if (qData.subType === 'mul') {
                     const pairs = [[25, 4], [125, 8], [5, 20], [50, 2]];
                     const chosenPair = pairs[Math.floor(Math.random() * pairs.length)];
-                    const n3 = Math.floor(Math.random() * 50) + 11;
+                    const n3 = Math.floor(Math.random() * 40) + 11;
                     qData.nums = [chosenPair[0], chosenPair[1], n3].sort(() => Math.random() - 0.5);
+                } else if (qData.subType === 'sub_two') {
+                    const bcTarget = (Math.floor(Math.random() * 4) + 4) * 10;
+                    const b = Math.floor(Math.random() * (bcTarget - 15)) + 11;
+                    const c = bcTarget - b;
+                    const a = bcTarget + Math.floor(Math.random() * 100) + 35;
+                    qData.nums = [a, b, c];
+                } else if (qData.subType === 'sub_near') {
+                    const subNum = Math.random() > 0.5 ? 99 : 98;
+                    const a = Math.floor(Math.random() * 150) + 120;
+                    qData.nums = [a, subNum];
                 }
             } else if (mode === 'time') {
                 qData.type = 'time';
-                const directions = ['day_to_hour', 'hour_to_day', 'hour_to_min', 'min_to_hour', 'min_to_sec', 'sec_to_min'];
+                const directions = ['compound_to_small', 'small_to_compound', 'under_one_unit'];
                 qData.subType = directions[Math.floor(Math.random() * directions.length)];
-                qData.val = Math.floor(Math.random() * 150) + 5;
-                if (qData.subType.includes('day')) qData.val = Math.floor(Math.random() * 8) + 2;
+                if (qData.subType === 'compound_to_small') {
+                    qData.unitPair = Math.random() > 0.5 ? {big: '小時', small: '分鐘', rate: 60} : {big: '分鐘', small: '秒', rate: 60};
+                    if (Math.random() > 0.6) qData.unitPair = {big: '日', small: '小時', rate: 24};
+                    qData.vBig = Math.floor(Math.random() * 5) + 1;
+                    qData.vSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 2;
+                } else if (qData.subType === 'small_to_compound') {
+                    qData.unitPair = Math.random() > 0.5 ? {big: '小時', small: '分鐘', rate: 60} : {big: '分鐘', small: '秒', rate: 60};
+                    if (Math.random() > 0.6) qData.unitPair = {big: '日', small: '小時', rate: 24};
+                    qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate * 3)) + (qData.unitPair.rate + 5);
+                } else {
+                    qData.unitPair = Math.random() > 0.5 ? {big: '日', small: '小時', rate: 24} : {big: '小時', small: '分鐘', rate: 60};
+                    if (Math.random() > 0.5 && qData.unitPair.big === '日') qData.unitPair = {big: '分鐘', small: '秒', rate: 60};
+                    qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 3;
+                }
             } else {
                 qData.type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
                 qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
@@ -228,7 +274,7 @@
             renderAll();
         }
 
-        // ================= 歷史紀錄處理 =================
+        // ================= 歷史快照儲存 =================
         function saveCurrentToHistory() {
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -273,7 +319,7 @@
 
         // ================= 各題型 HTML 渲染引擎 =================
 
-        // 1. 簡化計算單元
+        // 1. 簡化計算引擎 (擴充減法功能)
         function buildSimplifyHTML(q, show) {
             const nums = q.nums;
             let titleText = "";
@@ -281,100 +327,109 @@
             let finalAns = 0;
 
             if (q.subType === 'add') {
-                titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${nums[0]} ＋ ${nums[1]} ＋ ${nums[2]} ＝ ？</div>`;
-                // 找出哪兩個相加尾數是 0
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} ＋ ${nums[1]} ＋ ${nums[2]} ＝ ？</div>`;
                 let p1 = 0, p2 = 1, p3 = 2;
                 if ((nums[0] + nums[1]) % 10 === 0) { p1 = 0; p2 = 1; p3 = 2; }
                 else if ((nums[0] + nums[2]) % 10 === 0) { p1 = 0; p2 = 2; p3 = 1; }
                 else { p1 = 1; p2 = 2; p3 = 0; }
-                
                 finalAns = nums[0] + nums[1] + nums[2];
                 stepHtml = `
-                    <div class="text-sm text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
-                        <span class="text-red-600 font-bold">💡 湊整想法：</span><br>
-                        觀察尾數發現：<br>
-                        <span class="underline">${nums[p1]} ＋ ${nums[p2]} ＝ ${nums[p1] + nums[p2]}</span> (好算！)<br>
-                        接下來再算：<br>
-                        ${nums[p1] + nums[p2]} ＋ ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>
-                    </div>`;
-            } else {
-                titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${nums[0]} × ${nums[1]} × ${nums[2]} ＝ ？</div>`;
-                // 找出乘法黃金拍檔
+                    <span class="text-red-600 font-bold">💡 湊整想法（交換律）：</span><br>
+                    先將尾數能湊成十的組合圈起來：<br>
+                    <span class="underline">${nums[p1]} ＋ ${nums[p2]} ＝ ${nums[p1] + nums[p2]}</span><br>
+                    再加入第三個數：<br>
+                    ${nums[p1] + nums[p2]} ＋ ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+            } else if (q.subType === 'mul') {
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} × ${nums[1]} × ${nums[2]} ＝ ？</div>`;
                 let p1 = 0, p2 = 1, p3 = 2;
                 const checkPair = (a, b) => (a*b===100 || a*b===1000 || a*b===10 || a*b===40);
                 if (checkPair(nums[0], nums[1])) { p1 = 0; p2 = 1; p3 = 2; }
                 else if (checkPair(nums[0], nums[2])) { p1 = 0; p2 = 2; p3 = 1; }
                 else { p1 = 1; p2 = 2; p3 = 0; }
-
                 finalAns = nums[0] * nums[1] * nums[2];
                 stepHtml = `
-                    <div class="text-sm text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
-                        <span class="text-red-600 font-bold">💡 湊整想法：</span><br>
-                        記住乘法好朋友：<br>
-                        <span class="underline">${nums[p1]} × ${nums[p2]} ＝ ${nums[p1] * nums[p2]}</span><br>
-                        接下來再算：<br>
-                        ${nums[p1] * nums[p2]} × ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>
-                    </div>`;
-            }
-
-            return `
-                <div class="w-full flex flex-col items-center">
-                    ${titleText}
-                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">${stepHtml}</div>
-                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${finalAns}</div>
-                </div>`;
-        }
-
-        // 2. 時間換算單元
-        function buildTimeHTML(q, show) {
-            let titleText = "";
-            let stepHtml = "";
-            let finalAnsText = "";
-
-            switch (q.subType) {
-                case 'day_to_hour':
-                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 日 ＝ (  ) 小時</div>`;
-                    finalAnsText = `${q.val * 24} 小時`;
-                    stepHtml = `💡 想法：1日是 24 小時。<br>${q.val}日就是有 ${q.val} 個 24。<br>算式：<span class="font-mono font-bold">24 × ${q.val} ＝ ${q.val * 24}</span>`;
-                    break;
-                case 'hour_to_day':
-                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 小時 ＝ (  )日(  )小時</div>`;
-                    const d = Math.floor(q.val / 24);
-                    const h = q.val % 24;
-                    finalAnsText = `${d} 日 ${h} 小時`;
-                    stepHtml = `💡 想法：每 24 小時可以換成 1 日。<br>算式：<span class="font-mono font-bold">${q.val} ÷ 24 ＝ ${d} ... ${h}</span><br>商代表【日】，餘數代表【小時】。`;
-                    break;
-                case 'hour_to_min':
-                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 小時 ＝ (  ) 分鐘</div>`;
-                    finalAnsText = `${q.val * 60} 分鐘`;
-                    stepHtml = `💡 想法：1 小時是 60 分鐘。<br>${q.val}小時就是 ${q.val} 個 60。<br>算式：<span class="font-mono font-bold">60 × ${q.val} ＝ ${q.val * 60}</span>`;
-                    break;
-                case 'min_to_hour':
-                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 分鐘 ＝ (  )小時(  )分鐘</div>`;
-                    const th = Math.floor(q.val / 60);
-                    const tm = q.val % 60;
-                    finalAnsText = `${th} 小時 ${tm} 分鐘`;
-                    stepHtml = `💡 想法：每 60 分鐘可以換成 1 小時。<br>算式：<span class="font-mono font-bold">${q.val} ÷ 60 ＝ ${th} ... ${tm}</span><br>商代表【小時】，餘數代表【分鐘】。`;
-                    break;
-                case 'min_to_sec':
-                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 分鐘 ＝ (  ) 秒</div>`;
-                    finalAnsText = `${q.val * 60} 秒`;
-                    stepHtml = `💡 想法：1 分鐘是 60 秒。<br>${q.val}分鐘就是 ${q.val} 個 60。<br>算式：<span class="font-mono font-bold">60 × ${q.val} ＝ ${q.val * 60}</span>`;
-                    break;
-                case 'sec_to_min':
-                    titleText = `<div class="text-lg font-bold text-gray-700 mb-2">${q.val} 秒 ＝ (  )分鐘(  )秒</div>`;
-                    const m_min = Math.floor(q.val / 60);
-                    const s_sec = q.val % 60;
-                    finalAnsText = `${m_min} 分鐘 ${s_sec} 秒`;
-                    stepHtml = `💡 想法：每 60 秒可以換成 1 分鐘。<br>算式：<span class="font-mono font-bold">${q.val} ÷ 60 ＝ ${m_min} ... ${s_sec}</span><br>商代表【分鐘】，餘數代表【秒】。`;
-                    break;
+                    <span class="text-red-600 font-bold">💡 湊整想法（結合律）：</span><br>
+                    先找乘法好朋友組合：<br>
+                    <span class="underline">${nums[p1]} × ${nums[p2]} ＝ ${nums[p1] * nums[p2]}</span><br>
+                    接著計算：<br>
+                    ${nums[p1] * nums[p2]} × ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+            } else if (q.subType === 'sub_two') {
+                // 連減法：A - B - C = A - (B + C)
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} － ${nums[1]} － ${nums[2]} ＝ ？</div>`;
+                finalAns = nums[0] - nums[1] - nums[2];
+                stepHtml = `
+                    <span class="text-red-600 font-bold">💡 連減想法（去括號法則）：</span><br>
+                    連續減去兩個數，等於【減去這兩數的和】：<br>
+                    式子變成：${nums[0]} － <span class="underline">(${nums[1]} ＋ ${nums[2]})</span><br>
+                    ＝ ${nums[0]} － ${nums[1] + nums[2]}<br>
+                    ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+            } else if (q.subType === 'sub_near') {
+                // 接近整百：A - 99 = A - 100 + 1
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} － ${nums[1]} ＝ ？</div>`;
+                finalAns = nums[0] - nums[1];
+                let adjust = nums[1] === 99 ? 1 : 2;
+                stepHtml = `
+                    <span class="text-red-600 font-bold">💡 接近整百速算：</span><br>
+                    把 －${nums[1]} 當作先減去 100，再【加回 ${adjust}】！<br>
+                    式子變成：${nums[0]} － 100 ＋ ${adjust}<br>
+                    ＝ ${nums[0] - 100} ＋ ${adjust}<br>
+                    ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
             }
 
             return `
                 <div class="w-full flex flex-col items-center">
                     ${titleText}
                     <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
-                        <div class="text-sm text-left bg-amber-50 text-amber-950 border border-amber-200 p-3 rounded-lg leading-relaxed font-sans">
+                        <div class="text-xs text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
+                            ${stepHtml}
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${finalAns}</div>
+                </div>`;
+        }
+
+        // 2. 時間換算引擎 (全面擴充複名數、未滿一日/時/分題型)
+        function buildTimeHTML(q, show) {
+            let titleText = "";
+            let stepHtml = "";
+            let finalAnsText = "";
+
+            if (q.subType === 'compound_to_small') {
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${q.vBig} ${q.unitPair.big} ${q.vSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.small}</div>`;
+                const calculated = q.vBig * q.unitPair.rate;
+                finalAnsText = `${calculated + q.vSmall} ${q.unitPair.small}`;
+                stepHtml = `
+                    <span class="text-red-600 font-bold">💡 複名數拆解（大變小）：</span><br>
+                    先將大單位換算出來：<br>
+                    ${q.vBig} ${q.unitPair.big} ＝ ${q.unitPair.rate} × ${q.vBig} ＝ ${calculated} ${q.unitPair.small}<br>
+                    最後加上原本的：<br>
+                    ${calculated} ＋ ${q.vSmall} ＝ <span class="text-blue-600 font-bold">${calculated + q.vSmall}</span> ${q.unitPair.small}`;
+            } else if (q.subType === 'small_to_compound') {
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
+                const bigVal = Math.floor(q.totalSmall / q.unitPair.rate);
+                const smallVal = q.totalSmall % q.unitPair.rate;
+                finalAnsText = `${bigVal} ${q.unitPair.big} ${smallVal} ${q.unitPair.small}`;
+                stepHtml = `
+                    <span class="text-red-600 font-bold">💡 複名數歸納（小變大）：</span><br>
+                    每 ${q.unitPair.rate} ${q.unitPair.small} 可以進位成 1 ${q.unitPair.big}。<br>
+                    算式：${q.totalSmall} ÷ ${q.unitPair.rate} ＝ ${bigVal} ... ${smallVal}<br>
+                    商數就是【${q.unitPair.big}】，餘數就是剩下來的【${q.unitPair.small}】。`;
+            } else if (q.subType === 'under_one_unit') {
+                // 特殊：未滿一日/時/分
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
+                finalAnsText = `0 ${q.unitPair.big} ${q.totalSmall} ${q.unitPair.small}`;
+                stepHtml = `
+                    <span class="text-red-600 font-bold">💡 教學核心：未滿一單位</span><br>
+                    因為總數 <span class="text-red-600 font-bold">${q.totalSmall}</span> 小於進位標準 ${q.unitPair.rate}，不夠換成 1 ${q.unitPair.big}！<br>
+                    算式：${q.totalSmall} ÷ ${q.unitPair.rate} ＝ <span class="text-blue-600 font-bold">0</span> ... <span class="text-blue-600 font-bold">${q.totalSmall}</span><br>
+                    因此換算結果為：<span class="font-bold">0 ${q.unitPair.big}</span> 剩餘 <span class="font-bold">${q.totalSmall} ${q.unitPair.small}</span>。`;
+            }
+
+            return `
+                <div class="w-full flex flex-col items-center">
+                    ${titleText}
+                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
+                        <div class="text-xs text-left bg-amber-50 text-amber-950 border border-amber-200 p-3 rounded-lg leading-relaxed font-sans">
                             ${stepHtml}
                         </div>
                     </div>
@@ -382,7 +437,7 @@
                 </div>`;
         }
 
-        // 3. 常規直式：乘法
+        // 3. 常規直式：乘法引擎 (頂部進位)
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
@@ -446,7 +501,7 @@
             return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
         }
 
-        // 4. 常規直式：除法
+        // 4. 常規直式：除法引擎
         function buildDivHTML(n1, n2, show) {
             const q = Math.floor(n1 / n2).toString();
             const r = n1 % n2;
@@ -530,13 +585,17 @@
                 let mathContent = "";
                 let typeLabel = "";
 
-                // 根據不同的題型派發給不同的渲染引擎
                 if (q.type === 'simplify') {
                     mathContent = buildSimplifyHTML(q, q.show);
-                    typeLabel = q.subType === 'add' ? '加法簡化' : '乘法簡化';
+                    if (q.subType === 'add') typeLabel = '加法簡化';
+                    else if (q.subType === 'mul') typeLabel = '乘法簡化';
+                    else if (q.subType === 'sub_two') typeLabel = '減法簡化(連減)';
+                    else if (q.subType === 'sub_near') typeLabel = '減法簡化(補數)';
                 } else if (q.type === 'time') {
                     mathContent = buildTimeHTML(q, q.show);
-                    typeLabel = '時間換算';
+                    if (q.subType === 'compound_to_small') typeLabel = '時間：複名數換算';
+                    else if (q.subType === 'small_to_compound') typeLabel = '時間：單位進位';
+                    else if (q.subType === 'under_one_unit') typeLabel = '時間：未滿一單位';
                 } else if (q.type === 'mul') {
                     mathContent = buildMulHTML(q.n1, q.n2, q.show);
                     typeLabel = '乘法直式';
