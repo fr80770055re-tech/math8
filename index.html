@@ -70,6 +70,10 @@
                     <input type="checkbox" id="zeroCheck" class="w-4 h-4 cursor-pointer accent-blue-600">
                     <label for="zeroCheck" class="cursor-pointer select-none">尾數含 0 (速算練習)</label>
                 </div>
+                <div id="hintSettings" style="display:none" class="flex items-center gap-2 text-violet-700 font-bold bg-violet-50 px-3 py-1.5 rounded-md border border-violet-200 shadow-sm cursor-pointer hover:bg-violet-100 transition">
+                    <input type="checkbox" id="hintCheck" class="w-4 h-4 cursor-pointer accent-violet-600" onchange="renderAll()">
+                    <label for="hintCheck" class="cursor-pointer select-none">題目附橫式提示 (鷹架，不含答案)</label>
+                </div>
             </div>
             <button onclick="generateAll()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
                 ＋ 重新出題 (8題)
@@ -108,6 +112,8 @@
                     document.getElementById('digitSettings').style.display = 'flex';
                     document.getElementById('zeroSettings').style.display = 'flex';
                 }
+                const factorModes = ['factors', 'multiples', 'commonFactor', 'commonMultiple'];
+                document.getElementById('hintSettings').style.display = factorModes.includes(val) ? 'flex' : 'none';
                 generateAll();
             });
 
@@ -507,6 +513,29 @@
                 </div>`;
         }
 
+        // 題目區橫式提示 (鷹架)：只列算式、答案留空，勾選才顯示
+        function buildFactorScaffold(q) {
+            const box = document.getElementById('hintCheck');
+            if (!box || !box.checked) return "";
+            const blank = '<span class="inline-block w-10 border-b border-gray-400 align-bottom">&nbsp;</span>';
+            const list = (label, n, op, upTo, cols) => {
+                let rows = "";
+                for (let i = 1; i <= upTo; i++) rows += `<div>${n}${op}${i}＝${blank}</div>`;
+                return `<div><div class="font-bold text-gray-500 mb-1">${label}</div><div class="grid ${cols} gap-x-3 gap-y-1 font-mono">${rows}</div></div>`;
+            };
+            let inner = "";
+            if (q.subType === 'factors') {
+                inner = list(`試試看：${q.n} ÷ 幾 會整除？（寫出商與餘數）`, q.n, '÷', q.n, 'grid-cols-2');
+            } else if (q.subType === 'multiples') {
+                inner = list(`試試看：${q.n} × 幾？`, q.n, '×', q.count, 'grid-cols-2');
+            } else if (q.subType === 'common_factors') {
+                inner = `<div class="grid grid-cols-2 gap-3">${list(`${q.a} ÷ 幾`, q.a, '÷', q.a, 'grid-cols-1')}${list(`${q.b} ÷ 幾`, q.b, '÷', q.b, 'grid-cols-1')}</div>`;
+            } else {
+                inner = `<div class="grid grid-cols-2 gap-3">${list(`${q.a} × 幾`, q.a, '×', 8, 'grid-cols-1')}${list(`${q.b} × 幾`, q.b, '×', 8, 'grid-cols-1')}</div>`;
+            }
+            return `<div class="w-full text-xs bg-white border border-dashed border-violet-300 rounded-lg p-2 mt-1">${inner}</div>`;
+        }
+
         // 3. 因數／倍數／公因數／公倍數引擎 (含乘除法算式輔助)
         function buildFactorHTML(q, show) {
             let titleText = "";
@@ -595,6 +624,7 @@
             return `
                 <div class="w-full flex flex-col items-center">
                     ${titleText}
+                    ${buildFactorScaffold(q)}
                     <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
                         <div class="text-xs text-left bg-violet-50 text-violet-950 border border-violet-200 p-3 rounded-lg leading-relaxed font-sans">
                             ${aidHtml}
