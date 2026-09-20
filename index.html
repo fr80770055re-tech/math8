@@ -49,7 +49,11 @@
                         <option value="div">基礎直式：純除法練習</option>
                         <option value="simplify">特別單元：純簡化計算 (含四則/減法湊整)</option>
                         <option value="time">特別單元：純時間換算 (複名數/日時分秒進退位)</option>
-                        <option value="factor">特別單元：因數／倍數／公因數／公倍數</option>
+                        <option value="factors">特別單元：純因數練習</option>
+                        <option value="multiples">特別單元：純倍數練習</option>
+                        <option value="commonFactor">特別單元：純公因數練習</option>
+                        <option value="commonMultiple">特別單元：純公倍數練習</option>
+                        <option value="fraction">特別單元：分數加減 (異分母通分)</option>
                     </select>
                 </div>
                 <div id="digitSettings" class="flex items-center gap-2 text-gray-600 font-bold">
@@ -96,7 +100,8 @@
             
             document.getElementById('modeSelect').addEventListener('change', function(e) {
                 const val = e.target.value;
-                if (val === 'simplify' || val === 'time' || val === 'factor') {
+                const noDigitModes = ['simplify', 'time', 'factors', 'multiples', 'commonFactor', 'commonMultiple', 'fraction'];
+                if (noDigitModes.includes(val)) {
                     document.getElementById('digitSettings').style.display = 'none';
                     document.getElementById('zeroSettings').style.display = 'none';
                 } else {
@@ -134,22 +139,20 @@
             return (a * b) / gcdCalc(a, b);
         }
 
-        function generateFactorQuestion() {
-            const qData = { type: 'factor' };
-            const subTypes = ['factors', 'multiples', 'common_factors', 'common_multiples'];
-            qData.subType = subTypes[Math.floor(Math.random() * subTypes.length)];
+        function generateFactorQuestion(kind) {
+            const qData = { type: 'factor', subType: kind };
 
             const factorPool = [12, 16, 18, 20, 24, 28, 30, 32, 36, 40, 42, 45, 48];
             const smallPool = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
             const pairPool = [[12, 18], [8, 12], [16, 24], [9, 15], [10, 15], [6, 9], [14, 21], [20, 30], [15, 20], [12, 16]];
             const multiplePairPool = [[4, 6], [3, 4], [6, 8], [4, 5], [6, 9], [3, 5], [8, 12], [5, 6], [9, 12], [4, 10]];
 
-            if (qData.subType === 'factors') {
+            if (kind === 'factors') {
                 qData.n = factorPool[Math.floor(Math.random() * factorPool.length)];
-            } else if (qData.subType === 'multiples') {
+            } else if (kind === 'multiples') {
                 qData.n = smallPool[Math.floor(Math.random() * smallPool.length)];
                 qData.count = 6;
-            } else if (qData.subType === 'common_factors') {
+            } else if (kind === 'common_factors') {
                 const pair = pairPool[Math.floor(Math.random() * pairPool.length)];
                 qData.a = pair[0]; qData.b = pair[1];
             } else {
@@ -159,6 +162,29 @@
             }
             return qData;
         }
+
+        // ================= 分數加減 (異分母通分) 出題邏輯 =================
+        function generateFractionQuestion() {
+            const qData = { type: 'fraction' };
+            qData.op = Math.random() > 0.5 ? '+' : '-';
+
+            const denomPairs = [[2, 3], [2, 5], [3, 4], [2, 7], [3, 5], [4, 5], [2, 9], [3, 7], [5, 6], [3, 8], [4, 7], [5, 8]];
+            const pair = denomPairs[Math.floor(Math.random() * denomPairs.length)];
+            let d1 = pair[0], d2 = pair[1];
+            if (Math.random() > 0.5) { [d1, d2] = [d2, d1]; }
+
+            let n1 = Math.floor(Math.random() * (d1 - 1)) + 1;
+            let n2 = Math.floor(Math.random() * (d2 - 1)) + 1;
+
+            if (qData.op === '-' && (n1 / d1) < (n2 / d2)) {
+                [n1, d1, n2, d2] = [n2, d2, n1, d1];
+            }
+
+            qData.n1 = n1; qData.d1 = d1; qData.n2 = n2; qData.d2 = d2;
+            return qData;
+        }
+
+        const FACTOR_KIND_MAP = { factors: 'factors', multiples: 'multiples', commonFactor: 'common_factors', commonMultiple: 'common_multiples' };
 
         // ================= 出題核心邏輯 =================
         function generateAll() {
@@ -228,8 +254,10 @@
                         if (Math.random() > 0.5 && qData.unitPair.big === '日') qData.unitPair = {big: '分鐘', small: '秒', rate: 60};
                         qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 3; // 刻意讓總數小於進位率
                     }
-                } else if (mode === 'factor') {
-                    Object.assign(qData, generateFactorQuestion());
+                } else if (FACTOR_KIND_MAP[mode]) {
+                    Object.assign(qData, generateFactorQuestion(FACTOR_KIND_MAP[mode]));
+                } else if (mode === 'fraction') {
+                    Object.assign(qData, generateFractionQuestion());
                 } else {
                     qData.type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
                     qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
@@ -302,8 +330,10 @@
                     if (Math.random() > 0.5 && qData.unitPair.big === '日') qData.unitPair = {big: '分鐘', small: '秒', rate: 60};
                     qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 3;
                 }
-            } else if (mode === 'factor') {
-                Object.assign(qData, generateFactorQuestion());
+            } else if (FACTOR_KIND_MAP[mode]) {
+                Object.assign(qData, generateFactorQuestion(FACTOR_KIND_MAP[mode]));
+            } else if (mode === 'fraction') {
+                Object.assign(qData, generateFractionQuestion());
             } else {
                 qData.type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
                 qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
@@ -574,7 +604,56 @@
                 </div>`;
         }
 
-        // 4. 常規直式：乘法引擎 (頂部進位)
+        // 4. 分數加減 (異分母通分) 引擎
+        function fracHTML(num, den) {
+            return `<div class="flex flex-col items-center leading-none">
+                <span class="px-1">${num}</span>
+                <span class="w-full border-t-2 border-current my-0.5"></span>
+                <span class="px-1">${den}</span>
+            </div>`;
+        }
+
+        function buildFractionHTML(q, show) {
+            const { n1, d1, n2, d2, op } = q;
+            const l = lcmCalc(d1, d2);
+            const c1 = n1 * (l / d1);
+            const c2 = n2 * (l / d2);
+            const resultNum = op === '+' ? c1 + c2 : c1 - c2;
+            const g = gcdCalc(Math.abs(resultNum), l);
+            const simpNum = resultNum / g;
+            const simpDen = l / g;
+
+            const titleText = `
+                <div class="flex items-center gap-3 text-xl font-bold text-gray-700 mb-2">
+                    ${fracHTML(n1, d1)}
+                    <span>${op === '+' ? '＋' : '－'}</span>
+                    ${fracHTML(n2, d2)}
+                    <span>＝</span>
+                    <span>?</span>
+                </div>`;
+
+            const aidHtml = `
+                <span class="text-red-600 font-bold">💡 異分母加減：先通分（找分母的最小公倍數）</span><br>
+                ${d1} 和 ${d2} 的最小公倍數 ＝ ${l}<br>
+                通分：${n1}/${d1} ＝ ${c1}/${l}　，　${n2}/${d2} ＝ ${c2}/${l}<br>
+                計算：${c1} ${op} ${c2} ＝ ${resultNum}<br>
+                所以 ${resultNum}/${l}${g > 1 ? `，約分（分子分母同除以 ${g}）＝ <span class="text-blue-600 font-bold">${simpNum}/${simpDen}</span>` : ''}`;
+
+            const answerText = simpDen === 1 ? `${simpNum}` : `${simpNum}/${simpDen}`;
+
+            return `
+                <div class="w-full flex flex-col items-center">
+                    ${titleText}
+                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
+                        <div class="text-xs text-left bg-cyan-50 text-cyan-950 border border-cyan-200 p-3 rounded-lg leading-relaxed font-sans">
+                            ${aidHtml}
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${answerText}</div>
+                </div>`;
+        }
+
+        // 5. 常規直式：乘法引擎 (頂部進位)
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
@@ -638,7 +717,7 @@
             return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
         }
 
-        // 5. 常規直式：除法引擎
+        // 6. 常規直式：除法引擎
         function buildDivHTML(n1, n2, show) {
             const q = Math.floor(n1 / n2).toString();
             const r = n1 % n2;
@@ -739,6 +818,9 @@
                     else if (q.subType === 'multiples') typeLabel = '倍數';
                     else if (q.subType === 'common_factors') typeLabel = '公因數';
                     else if (q.subType === 'common_multiples') typeLabel = '公倍數';
+                } else if (q.type === 'fraction') {
+                    mathContent = buildFractionHTML(q, q.show);
+                    typeLabel = q.op === '+' ? '分數加法(異分母)' : '分數減法(異分母)';
                 } else if (q.type === 'mul') {
                     mathContent = buildMulHTML(q.n1, q.n2, q.show);
                     typeLabel = '乘法直式';
