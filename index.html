@@ -49,6 +49,7 @@
                         <option value="div">基礎直式：純除法練習</option>
                         <option value="simplify">特別單元：純簡化計算 (含四則/減法湊整)</option>
                         <option value="time">特別單元：純時間換算 (複名數/日時分秒進退位)</option>
+                        <option value="factor">特別單元：因數／倍數／公因數／公倍數</option>
                     </select>
                 </div>
                 <div id="digitSettings" class="flex items-center gap-2 text-gray-600 font-bold">
@@ -95,7 +96,7 @@
             
             document.getElementById('modeSelect').addEventListener('change', function(e) {
                 const val = e.target.value;
-                if (val === 'simplify' || val === 'time') {
+                if (val === 'simplify' || val === 'time' || val === 'factor') {
                     document.getElementById('digitSettings').style.display = 'none';
                     document.getElementById('zeroSettings').style.display = 'none';
                 } else {
@@ -122,6 +123,41 @@
             const zeroCount = Math.floor(Math.random() * Math.min(2, maxZeros)) + 1; 
             const baseDigits = digits - zeroCount;
             return generateNum(baseDigits) * Math.pow(10, zeroCount);
+        }
+
+        // ================= 因數／倍數／公因數／公倍數 出題邏輯 =================
+        function gcdCalc(a, b) {
+            while (b) { const t = a % b; a = b; b = t; }
+            return a;
+        }
+        function lcmCalc(a, b) {
+            return (a * b) / gcdCalc(a, b);
+        }
+
+        function generateFactorQuestion() {
+            const qData = { type: 'factor' };
+            const subTypes = ['factors', 'multiples', 'common_factors', 'common_multiples'];
+            qData.subType = subTypes[Math.floor(Math.random() * subTypes.length)];
+
+            const factorPool = [12, 16, 18, 20, 24, 28, 30, 32, 36, 40, 42, 45, 48];
+            const smallPool = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+            const pairPool = [[12, 18], [8, 12], [16, 24], [9, 15], [10, 15], [6, 9], [14, 21], [20, 30], [15, 20], [12, 16]];
+            const multiplePairPool = [[4, 6], [3, 4], [6, 8], [4, 5], [6, 9], [3, 5], [8, 12], [5, 6], [9, 12], [4, 10]];
+
+            if (qData.subType === 'factors') {
+                qData.n = factorPool[Math.floor(Math.random() * factorPool.length)];
+            } else if (qData.subType === 'multiples') {
+                qData.n = smallPool[Math.floor(Math.random() * smallPool.length)];
+                qData.count = 6;
+            } else if (qData.subType === 'common_factors') {
+                const pair = pairPool[Math.floor(Math.random() * pairPool.length)];
+                qData.a = pair[0]; qData.b = pair[1];
+            } else {
+                const pair = multiplePairPool[Math.floor(Math.random() * multiplePairPool.length)];
+                qData.a = pair[0]; qData.b = pair[1];
+                qData.count = 3;
+            }
+            return qData;
         }
 
         // ================= 出題核心邏輯 =================
@@ -192,6 +228,8 @@
                         if (Math.random() > 0.5 && qData.unitPair.big === '日') qData.unitPair = {big: '分鐘', small: '秒', rate: 60};
                         qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 3; // 刻意讓總數小於進位率
                     }
+                } else if (mode === 'factor') {
+                    Object.assign(qData, generateFactorQuestion());
                 } else {
                     qData.type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
                     qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
@@ -264,6 +302,8 @@
                     if (Math.random() > 0.5 && qData.unitPair.big === '日') qData.unitPair = {big: '分鐘', small: '秒', rate: 60};
                     qData.totalSmall = Math.floor(Math.random() * (qData.unitPair.rate - 5)) + 3;
                 }
+            } else if (mode === 'factor') {
+                Object.assign(qData, generateFactorQuestion());
             } else {
                 qData.type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
                 qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
@@ -437,7 +477,104 @@
                 </div>`;
         }
 
-        // 3. 常規直式：乘法引擎 (頂部進位)
+        // 3. 因數／倍數／公因數／公倍數引擎 (含乘除法算式輔助)
+        function buildFactorHTML(q, show) {
+            let titleText = "";
+            let aidHtml = "";
+            let answerHtml = "";
+
+            if (q.subType === 'factors') {
+                const n = q.n;
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${n} 的因數有哪些？</div>`;
+                const factors = [];
+                let rows = "";
+                for (let i = 1; i <= n; i++) {
+                    if (n % i === 0) {
+                        factors.push(i);
+                        rows += `<div class="text-emerald-700 font-bold">${n}÷${i}＝${n / i} ✓</div>`;
+                    } else {
+                        rows += `<div class="text-gray-400">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
+                    }
+                }
+                aidHtml = `
+                    <span class="text-red-600 font-bold">💡 輔助算式（逐一測試除法，整除的就是因數）：</span>
+                    <div class="grid grid-cols-3 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
+                answerHtml = `${factors.join('、')}（共 ${factors.length} 個）`;
+            } else if (q.subType === 'multiples') {
+                const n = q.n, count = q.count;
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${n} 的倍數有哪些？(請寫出前 ${count} 個)</div>`;
+                const mults = [];
+                let rows = "";
+                for (let i = 1; i <= count; i++) {
+                    mults.push(n * i);
+                    rows += `<div class="text-emerald-700 font-bold">${n}×${i}＝${n * i}</div>`;
+                }
+                aidHtml = `
+                    <span class="text-red-600 font-bold">💡 輔助算式（用乘法依序找倍數）：</span>
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
+                answerHtml = `${mults.join('、')}`;
+            } else if (q.subType === 'common_factors') {
+                const a = q.a, b = q.b;
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${a} 和 ${b} 的公因數有哪些？</div>`;
+                const factorsA = [], factorsB = [];
+                let rowsA = "", rowsB = "";
+                for (let i = 1; i <= a; i++) {
+                    if (a % i === 0) { factorsA.push(i); rowsA += `<div class="text-emerald-700 font-bold">${a}÷${i}＝${a / i} ✓</div>`; }
+                    else { rowsA += `<div class="text-gray-400">${a}÷${i}＝${Math.floor(a / i)}...${a % i}</div>`; }
+                }
+                for (let i = 1; i <= b; i++) {
+                    if (b % i === 0) { factorsB.push(i); rowsB += `<div class="text-emerald-700 font-bold">${b}÷${i}＝${b / i} ✓</div>`; }
+                    else { rowsB += `<div class="text-gray-400">${b}÷${i}＝${Math.floor(b / i)}...${b % i}</div>`; }
+                }
+                const common = factorsA.filter(x => factorsB.includes(x));
+                const g = gcdCalc(a, b);
+                aidHtml = `
+                    <span class="text-red-600 font-bold">💡 輔助算式（分別列出兩數的除法算式）：</span>
+                    <div class="grid grid-cols-2 gap-3 mt-2">
+                        <div><div class="font-bold text-gray-600 mb-1">${a} 的因數：</div><div class="font-mono">${rowsA}</div></div>
+                        <div><div class="font-bold text-gray-600 mb-1">${b} 的因數：</div><div class="font-mono">${rowsB}</div></div>
+                    </div>
+                    <div class="mt-2">兩邊都整除的數字就是【公因數】，其中最大的稱為<span class="font-bold">最大公因數(GCD)</span>。</div>`;
+                answerHtml = `${common.join('、')}（最大公因數為 ${g}）`;
+            } else {
+                const a = q.a, b = q.b, count = q.count;
+                const l = lcmCalc(a, b);
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${a} 和 ${b} 的公倍數有哪些？(請寫出前 ${count} 個)</div>`;
+                const limit = l * count;
+                let rowsA = "", rowsB = "";
+                for (let i = 1; a * i <= limit; i++) {
+                    const isCommon = (a * i) % l === 0;
+                    rowsA += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-gray-400'}">${a}×${i}＝${a * i}${isCommon ? ' ✓' : ''}</div>`;
+                }
+                for (let i = 1; b * i <= limit; i++) {
+                    const isCommon = (b * i) % l === 0;
+                    rowsB += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-gray-400'}">${b}×${i}＝${b * i}${isCommon ? ' ✓' : ''}</div>`;
+                }
+                const commons = [];
+                for (let i = 1; i <= count; i++) commons.push(l * i);
+                aidHtml = `
+                    <span class="text-red-600 font-bold">💡 輔助算式（分別列出兩數的乘法算式）：</span>
+                    <div class="grid grid-cols-2 gap-3 mt-2">
+                        <div><div class="font-bold text-gray-600 mb-1">${a} 的倍數：</div><div class="font-mono">${rowsA}</div></div>
+                        <div><div class="font-bold text-gray-600 mb-1">${b} 的倍數：</div><div class="font-mono">${rowsB}</div></div>
+                    </div>
+                    <div class="mt-2">兩邊都出現的數字就是【公倍數】，其中最小的稱為<span class="font-bold">最小公倍數(LCM)</span>。</div>`;
+                answerHtml = `${commons.join('、')}（最小公倍數為 ${l}）`;
+            }
+
+            return `
+                <div class="w-full flex flex-col items-center">
+                    ${titleText}
+                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
+                        <div class="text-xs text-left bg-violet-50 text-violet-950 border border-violet-200 p-3 rounded-lg leading-relaxed font-sans">
+                            ${aidHtml}
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-base ${show ? 'opacity-100' : 'opacity-0'}">＝ ${answerHtml}</div>
+                </div>`;
+        }
+
+        // 4. 常規直式：乘法引擎 (頂部進位)
         function buildMulHTML(n1, n2, show) {
             const n1Str = n1.toString();
             const n2Str = n2.toString();
@@ -501,7 +638,7 @@
             return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
         }
 
-        // 4. 常規直式：除法引擎
+        // 5. 常規直式：除法引擎
         function buildDivHTML(n1, n2, show) {
             const q = Math.floor(n1 / n2).toString();
             const r = n1 % n2;
@@ -596,6 +733,12 @@
                     if (q.subType === 'compound_to_small') typeLabel = '時間：複名數換算';
                     else if (q.subType === 'small_to_compound') typeLabel = '時間：單位進位';
                     else if (q.subType === 'under_one_unit') typeLabel = '時間：未滿一單位';
+                } else if (q.type === 'factor') {
+                    mathContent = buildFactorHTML(q, q.show);
+                    if (q.subType === 'factors') typeLabel = '因數';
+                    else if (q.subType === 'multiples') typeLabel = '倍數';
+                    else if (q.subType === 'common_factors') typeLabel = '公因數';
+                    else if (q.subType === 'common_multiples') typeLabel = '公倍數';
                 } else if (q.type === 'mul') {
                     mathContent = buildMulHTML(q.n1, q.n2, q.show);
                     typeLabel = '乘法直式';
