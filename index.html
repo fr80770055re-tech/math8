@@ -53,6 +53,8 @@
                         <option value="multiples">特別單元：純倍數練習</option>
                         <option value="commonFactor">特別單元：純公因數練習</option>
                         <option value="commonMultiple">特別單元：純公倍數練習</option>
+                        <option value="factorMix">特別單元：因數倍數混合 (因數60以內、倍數19以內)</option>
+                        <option value="factorRange">特別單元：限定範圍的因數倍數 (如：在15至20之間的45的因數)</option>
                         <option value="fraction">特別單元：分數加減 (異分母通分)</option>
                     </select>
                 </div>
@@ -104,7 +106,7 @@
             
             document.getElementById('modeSelect').addEventListener('change', function(e) {
                 const val = e.target.value;
-                const noDigitModes = ['simplify', 'time', 'factors', 'multiples', 'commonFactor', 'commonMultiple', 'fraction'];
+                const noDigitModes = ['simplify', 'time', 'factors', 'multiples', 'commonFactor', 'commonMultiple', 'factorMix', 'factorRange', 'fraction'];
                 if (noDigitModes.includes(val)) {
                     document.getElementById('digitSettings').style.display = 'none';
                     document.getElementById('zeroSettings').style.display = 'none';
@@ -112,7 +114,7 @@
                     document.getElementById('digitSettings').style.display = 'flex';
                     document.getElementById('zeroSettings').style.display = 'flex';
                 }
-                const factorModes = ['factors', 'multiples', 'commonFactor', 'commonMultiple'];
+                const factorModes = ['factors', 'multiples', 'commonFactor', 'commonMultiple', 'factorMix', 'factorRange'];
                 document.getElementById('hintSettings').style.display = factorModes.includes(val) ? 'flex' : 'none';
                 generateAll();
             });
@@ -145,7 +147,43 @@
             return (a * b) / gcdCalc(a, b);
         }
 
+        const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const divisorsOf = (n) => { const d = []; for (let i = 1; i <= n; i++) if (n % i === 0) d.push(i); return d; };
+        // 混合出題用：60 以內、至少有 4 個因數的數 (避開質數與太簡單的數)
+        const MIX_FACTOR_POOL = Array.from({ length: 55 }, (_, i) => i + 6).filter(n => divisorsOf(n).length >= 4);
+
+        // 限定範圍：在 lo 至 hi 之間 (含兩端) 的 n 的因數，答案 1~3 個
+        function generateFactorRange() {
+            while (true) {
+                const n = MIX_FACTOR_POOL[Math.floor(Math.random() * MIX_FACTOR_POOL.length)];
+                const lo = randInt(2, Math.max(2, n - 4));
+                const hi = Math.min(n, lo + randInt(3, 10));
+                const hits = divisorsOf(n).filter(d => d >= lo && d <= hi).length;
+                if (hits >= 1 && hits <= 3) return { subType: 'factors_range', n, lo, hi };
+            }
+        }
+
+        // 限定範圍：在 lo 到 hi 之間 (含兩端) 的 n 的倍數，n 在 19 以內，答案 1~4 個
+        function generateMultipleRange() {
+            while (true) {
+                const n = randInt(2, 19);
+                const lo = randInt(2, 18) * 5;
+                const hi = lo + randInt(1, 6) * 5;
+                const hits = Math.floor(hi / n) - Math.floor((lo - 1) / n);
+                if (lo > n && hits >= 1 && hits <= 4) return { subType: 'multiples_range', n, lo, hi };
+            }
+        }
+
         function generateFactorQuestion(kind) {
+            if (kind === 'mix') {
+                if (Math.random() < 0.5) {
+                    return { type: 'factor', subType: 'factors', n: MIX_FACTOR_POOL[Math.floor(Math.random() * MIX_FACTOR_POOL.length)] };
+                }
+                return { type: 'factor', subType: 'multiples', n: randInt(2, 19), count: 6 };
+            }
+            if (kind === 'range') {
+                return { type: 'factor', ...(Math.random() < 0.5 ? generateFactorRange() : generateMultipleRange()) };
+            }
             const qData = { type: 'factor', subType: kind };
 
             const factorPool = [12, 16, 18, 20, 24, 28, 30, 32, 36, 40, 42, 45, 48];
@@ -190,7 +228,7 @@
             return qData;
         }
 
-        const FACTOR_KIND_MAP = { factors: 'factors', multiples: 'multiples', commonFactor: 'common_factors', commonMultiple: 'common_multiples' };
+        const FACTOR_KIND_MAP = { factors: 'factors', multiples: 'multiples', commonFactor: 'common_factors', commonMultiple: 'common_multiples', factorMix: 'mix', factorRange: 'range' };
 
         // ================= 出題核心邏輯 =================
         function generateAll() {
@@ -528,6 +566,12 @@
                 inner = list(`提示：哪些數可以整除 ${q.n}？（先試前幾個，寫出商與餘數）`, q.n, '÷', 5, 'grid-cols-2');
             } else if (q.subType === 'multiples') {
                 inner = list(`提示：${q.n} × 幾？（先寫前幾個）`, q.n, '×', 5, 'grid-cols-2');
+            } else if (q.subType === 'factors_range') {
+                let rows = "";
+                for (let i = q.lo; i <= q.hi; i++) rows += `<div>${q.n}÷${i}＝${blank}</div>`;
+                inner = `<div class="font-bold text-gray-500 mb-1">提示：${q.lo} 到 ${q.hi} 之間，哪些數可以整除 ${q.n}？</div><div class="grid grid-cols-2 gap-x-3 gap-y-1 font-mono">${rows}</div>`;
+            } else if (q.subType === 'multiples_range') {
+                inner = `<div class="font-bold text-gray-500 mb-1">提示：先估計從 ${q.n} × 幾開始超過 ${q.lo}</div><div class="grid grid-cols-1 gap-y-1 font-mono"><div>${q.lo}÷${q.n}＝${blank}...${blank}</div><div>${q.n}×${blank}＝${blank}</div><div>${q.n}×${blank}＝${blank}</div><div>${q.n}×${blank}＝${blank}</div></div>`;
             } else if (q.subType === 'common_factors') {
                 inner = `<div class="font-bold text-gray-500 mb-1">提示：哪些數可以同時整除 ${q.a} 和 ${q.b}？</div><div class="grid grid-cols-2 gap-3">${list(`${q.a} ÷ 幾`, q.a, '÷', 5, 'grid-cols-1')}${list(`${q.b} ÷ 幾`, q.b, '÷', 5, 'grid-cols-1')}</div>`;
             } else {
@@ -572,6 +616,42 @@
                     <span class="text-red-600 font-bold">💡 輔助算式（用乘法依序找倍數）：</span>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
                 answerHtml = `${mults.join('、')}`;
+            } else if (q.subType === 'factors_range') {
+                const { n, lo, hi } = q;
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">在 ${lo} 至 ${hi} 之間（含 ${lo} 和 ${hi}）的 ${n} 的因數有哪些？</div>`;
+                const factors = divisorsOf(n);
+                const picked = factors.filter(d => d >= lo && d <= hi);
+                const chips = factors.map(d => picked.includes(d)
+                    ? `<span class="text-emerald-700 font-bold underline">${d}</span>`
+                    : `<span class="text-gray-400">${d}</span>`).join('、');
+                let rows = "";
+                for (let i = lo; i <= hi; i++) {
+                    rows += n % i === 0
+                        ? `<div class="text-emerald-700 font-bold">${n}÷${i}＝${n / i} ✓</div>`
+                        : `<div class="text-gray-400">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
+                }
+                aidHtml = `
+                    <span class="text-red-600 font-bold">💡 輔助算式（只測試 ${lo}～${hi}，含 ${lo} 和 ${hi}）：</span>
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>
+                    <div class="mt-2">${n} 的所有因數：${chips}<br>落在 ${lo}～${hi} 之間的才是答案。</div>`;
+                answerHtml = `${picked.join('、')}`;
+            } else if (q.subType === 'multiples_range') {
+                const { n, lo, hi } = q;
+                titleText = `<div class="text-base font-bold text-gray-700 mb-2">在 ${lo} 到 ${hi} 之間（含 ${lo} 和 ${hi}）的 ${n} 的倍數有哪些？</div>`;
+                const startK = Math.max(1, Math.floor(lo / n));
+                const picked = [];
+                let rows = "";
+                for (let k = startK; n * k <= hi + n; k++) {
+                    const v = n * k;
+                    const inRange = v >= lo && v <= hi;
+                    if (inRange) picked.push(v);
+                    rows += `<div class="${inRange ? 'text-emerald-700 font-bold' : 'text-gray-400'}">${n}×${k}＝${v}${inRange ? ' ✓' : ''}</div>`;
+                }
+                aidHtml = `
+                    <span class="text-red-600 font-bold">💡 輔助算式（先估計起點，含 ${lo} 和 ${hi}）：</span><br>
+                    ${lo} ÷ ${n} ＝ ${Math.floor(lo / n)} ... ${lo % n}，所以從 ${n} × ${startK} 附近開始找：
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
+                answerHtml = `${picked.join('、')}`;
             } else if (q.subType === 'common_factors') {
                 const a = q.a, b = q.b;
                 titleText = `<div class="text-base font-bold text-gray-700 mb-2">${a} 和 ${b} 的公因數有哪些？</div>`;
@@ -846,6 +926,8 @@
                     mathContent = buildFactorHTML(q, q.show);
                     if (q.subType === 'factors') typeLabel = '因數';
                     else if (q.subType === 'multiples') typeLabel = '倍數';
+                    else if (q.subType === 'factors_range') typeLabel = '因數(限範圍)';
+                    else if (q.subType === 'multiples_range') typeLabel = '倍數(限範圍)';
                     else if (q.subType === 'common_factors') typeLabel = '公因數';
                     else if (q.subType === 'common_multiples') typeLabel = '公倍數';
                 } else if (q.type === 'fraction') {
