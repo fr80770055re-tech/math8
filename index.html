@@ -187,6 +187,15 @@
                 if (before && before.questions.length) setSaveStatus('已切換題型並出新題。', () => restoreCaptured(before));
             });
 
+            // 位數與「尾數含 0」也會改變題目，變更時同步重新出題，避免畫面與設定不一致
+            ['d1Select', 'd2Select', 'zeroCheck'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    const before = settledSnap;
+                    generateAll();
+                    if (before && before.questions.length) setSaveStatus('已依新設定出新題。', () => restoreCaptured(before));
+                });
+            });
+
             applyModeUI(document.getElementById('modeSelect').value);
             renderHistory();
             generateAll();
