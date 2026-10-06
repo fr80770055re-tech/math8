@@ -5,17 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>作業繳交小幫手 - 綜合數學出題</title>
     
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: {
+            sans: ["Noto Sans TC", "system-ui", "sans-serif"],
+            mono: ["IBM Plex Mono", "Noto Sans TC", "ui-monospace", "monospace"]
+        } } } };
+    </script>
 
     <style>
-        .math-font { 
-            font-family: 'Courier New', Courier, monospace; 
-            font-size: 1.3rem; 
-            line-height: 1.3;
-            letter-spacing: 0.1em;
-            white-space: pre; 
+        @media (hover: none) { .refresh-btn { opacity: 1; } }
+
+        .answer-row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; width: 100%; }
+        .answer-q { min-width: 0; flex: 0 1 auto; }
+        .answer-a { font-family: 'IBM Plex Mono', 'Noto Sans TC', ui-monospace, monospace; flex: 0 1 auto; min-width: 0; margin-left: auto; text-align: right; font-weight: 700; color: #c2410c; font-size: 1.15rem; line-height: 1.3; overflow-wrap: anywhere; }
+
+        /* ===== A4 直式列印 ===== */
+        #printArea { display: none; }
+        @page { size: A4 portrait; margin: 12mm; }
+        @media print {
+            body { background: #fff !important; min-height: 0 !important; display: block !important; }
+            body > *:not(main), main > *:not(#printArea) { display: none !important; }
+            main { display: block; max-width: none; padding: 0; margin: 0; }
+            #printArea { display: block; -webkit-print-color-adjust: exact; print-color-adjust: exact; color: #1c1917; }
+            .print-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12mm; padding-bottom: 3mm; margin-bottom: 5mm; border-bottom: 1px solid #78716c; font-size: 12pt; }
+            .print-head h2 { font-size: 15pt; font-weight: 700; }
+            .print-fill { flex: 1; text-align: right; white-space: nowrap; }
+            .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+            .print-cell { break-inside: avoid; border: 1px solid #a8a29e; border-radius: 2mm; padding: 4mm; min-height: 58mm; display: flex; flex-direction: column; }
+            .print-cell .print-label { font-size: 10pt; font-weight: 700; margin-bottom: 3mm; }
+            .print-cell .math-font { font-size: 15pt; }
+            .print-cell .q-title { font-size: 13pt; }
+            .print-cell .print-body { flex: 1; display: flex; justify-content: center; align-items: flex-start; }
         }
-        body { margin: 0; overflow-x: hidden; background-color: #f8fafc; }
+        @media (prefers-reduced-motion: reduce) { .detail-show { animation: none; } }
+        :root {
+            --paper: #f4edda;
+            --sheet: #fffdf5;
+        }
+        .math-font {
+            font-family: 'IBM Plex Mono', 'Noto Sans TC', ui-monospace, monospace;
+            font-weight: 500;
+            font-size: 1.6rem;
+            line-height: 1.3;
+            letter-spacing: 0;
+            white-space: pre;
+        }
+        .q-title { font-family: 'IBM Plex Mono', 'Noto Sans TC', ui-monospace, monospace; font-weight: 600; font-size: 1.2rem; line-height: 1.5; color: #44403c; }
+        .q-title-lg { font-size: 1.5rem; }
+        body { margin: 0; overflow-x: hidden; background-color: var(--paper); }
+        /* 素色紙質：題目卡片像一張奶油色紙 */
+        .paper-card {
+            background-color: var(--sheet);
+            box-shadow: 0 1px 2px rgba(80, 60, 20, 0.12), 0 6px 14px -8px rgba(80, 60, 20, 0.25);
+        }
         
         .detail-hidden { display: none; }
         .detail-show { display: block; animation: fadeIn 0.4s ease-out; }
@@ -27,12 +73,12 @@
 </head>
 <body class="text-gray-800 font-sans flex flex-col min-h-screen" onload="initApp()">
 
-    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center px-6">
+    <header class="bg-[#fffdf5] text-stone-800 border-b border-stone-300 p-4 flex justify-between items-center px-6">
         <div class="flex items-center gap-3">
             <span class="text-2xl">📖</span>
             <h1 class="text-xl font-bold tracking-wider">作業繳交小幫手</h1>
         </div>
-        <div class="text-sm font-medium opacity-80" id="countDisplay">
+        <div class="text-sm font-medium text-stone-600" id="countDisplay">
             累積出題：0 次
         </div>
     </header>
@@ -43,7 +89,7 @@
             <div class="flex flex-wrap gap-6 items-center">
                 <div class="flex items-center gap-2">
                     <span class="text-gray-600 font-bold">題型：</span>
-                    <select id="modeSelect" class="border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="modeSelect" aria-label="題型" class="border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-orange-500">
                         <option value="mix">基礎直式：混合模式 (乘除各半)</option>
                         <option value="mul">基礎直式：純乘法練習</option>
                         <option value="div">基礎直式：純除法練習</option>
@@ -60,46 +106,67 @@
                 </div>
                 <div id="digitSettings" class="flex items-center gap-2 text-gray-600 font-bold">
                     位數：
-                    <select id="d1Select" class="border rounded px-2 py-1">
+                    <select id="d1Select" aria-label="被除數／被乘數位數" class="border rounded px-2 py-1">
                         <option value="3">3位</option><option value="4">4位</option><option value="5">5位</option>
                     </select>
                     <span class="text-lg mx-1">÷/×</span>
-                    <select id="d2Select" class="border rounded px-2 py-1">
+                    <select id="d2Select" aria-label="除數／乘數位數" class="border rounded px-2 py-1">
                         <option value="1">1位</option><option value="2" selected>2位</option><option value="3">3位</option>
                     </select>
                 </div>
-                <div id="zeroSettings" class="flex items-center gap-2 text-blue-700 font-bold bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200 shadow-sm cursor-pointer hover:bg-blue-100 transition">
-                    <input type="checkbox" id="zeroCheck" class="w-4 h-4 cursor-pointer accent-blue-600">
+                <div id="zeroSettings" class="flex items-center gap-2 text-orange-800 font-bold bg-orange-50 px-3 py-1.5 rounded-md border border-orange-200 shadow-sm cursor-pointer hover:bg-orange-100 transition">
+                    <input type="checkbox" id="zeroCheck" class="w-4 h-4 cursor-pointer accent-orange-700">
                     <label for="zeroCheck" class="cursor-pointer select-none">尾數含 0 (速算練習)</label>
                 </div>
-                <div id="hintSettings" style="display:none" class="flex items-center gap-2 text-violet-700 font-bold bg-violet-50 px-3 py-1.5 rounded-md border border-violet-200 shadow-sm cursor-pointer hover:bg-violet-100 transition">
-                    <input type="checkbox" id="hintCheck" class="w-4 h-4 cursor-pointer accent-violet-600" onchange="renderAll()">
+                <div id="hintSettings" style="display:none" class="flex items-center gap-2 text-orange-800 font-bold bg-orange-50 px-3 py-1.5 rounded-md border border-orange-200 shadow-sm cursor-pointer hover:bg-orange-100 transition">
+                    <input type="checkbox" id="hintCheck" class="w-4 h-4 cursor-pointer accent-orange-700" onchange="renderAll()">
                     <label for="hintCheck" class="cursor-pointer select-none">題目附橫式提示 (鷹架，不含答案)</label>
                 </div>
             </div>
-            <button onclick="generateAll()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
-                ＋ 重新出題 (8題)
-            </button>
+            <div class="flex flex-wrap gap-2 items-center">
+                <button onclick="printSheet('questions')" class="bg-white text-orange-900 border border-orange-300 hover:bg-orange-50 px-4 py-2 rounded-md font-bold transition">列印題目</button>
+                <button onclick="printSheet('answers')" class="bg-white text-orange-900 border border-orange-300 hover:bg-orange-50 px-4 py-2 rounded-md font-bold transition">列印答案卷</button>
+                <button onclick="generateAll()" class="bg-orange-700 hover:bg-orange-800 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">
+                    ＋ 重新出題 (8題)
+                </button>
+            </div>
         </div>
 
-        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex gap-4 items-center shadow-sm">
-            <button onclick="saveCurrentToHistory()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex-shrink-0">
+        <div class="bg-[#fbf3dc] border border-stone-300 p-4 rounded-xl flex gap-4 items-center shadow-sm">
+            <button onclick="saveCurrentToHistory()" class="bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition flex-shrink-0">
                 💾 儲存目前這組題目
             </button>
-            <div class="w-px h-8 bg-indigo-200 mx-2"></div>
-            <div class="text-sm text-indigo-800 font-bold flex-shrink-0">讀取存檔：</div>
+            <div class="w-px h-8 bg-stone-300 mx-2"></div>
+            <div class="text-sm text-stone-700 font-bold flex-shrink-0">讀取存檔：</div>
             <div id="historyContainer" class="flex flex-wrap gap-2 items-center flex-1">
                 </div>
+            <div id="saveStatus" role="status" class="text-sm text-stone-700 font-bold"></div>
         </div>
 
         <div id="quizContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+        <div id="printArea" aria-hidden="true"></div>
         
     </main>
 
     <script>
         let questions = [];
-        let practiceCount = parseInt(localStorage.getItem('math_pure_count') || '0');
-        let historyRecords = JSON.parse(localStorage.getItem('math_snapshots') || '[]');
+        // 瀏覽器儲存空間可能被封鎖或內容損毀：讀寫都不能讓頁面壞掉
+        function storageGet(key) {
+            try { return localStorage.getItem(key); } catch (e) { return null; }
+        }
+        function storageSet(key, value) {
+            try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+        }
+        function readHistory() {
+            try {
+                const parsed = JSON.parse(storageGet('math_snapshots') || '[]');
+                return Array.isArray(parsed)
+                    ? parsed.filter(r => r && typeof r.id === 'number' && Array.isArray(r.data))
+                    : [];
+            } catch (e) { return []; }
+        }
+        let practiceCount = parseInt(storageGet('math_pure_count') || '0', 10) || 0;
+        let historyRecords = readHistory();
 
         function initApp() {
             document.getElementById('countDisplay').innerText = `累積出題：${practiceCount} 次`;
@@ -136,6 +203,17 @@
             const zeroCount = Math.floor(Math.random() * Math.min(2, maxZeros)) + 1; 
             const baseDigits = digits - zeroCount;
             return generateNum(baseDigits) * Math.pow(10, zeroCount);
+        }
+
+        // 直式乘除的兩個數；除法保證被除數不小於除數 (避免商為 0 的退化題)
+        function makeOperands(type, d1, d2, isZeroMode) {
+            const pick = (d) => isZeroMode ? getTrailingZeroNum(d) : generateNum(d);
+            let n1 = pick(d1), n2 = pick(d2);
+            if (type === 'div') {
+                for (let tries = 0; n1 < n2 && tries < 20; tries++) { n1 = pick(d1); n2 = pick(d2); }
+                if (n1 < n2) [n1, n2] = [n2, n1];
+            }
+            return { n1, n2 };
         }
 
         // ================= 因數／倍數／公因數／公倍數 出題邏輯 =================
@@ -304,15 +382,14 @@
                     Object.assign(qData, generateFractionQuestion());
                 } else {
                     qData.type = mode === 'mix' ? (i < 4 ? 'mul' : 'div') : mode;
-                    qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
-                    qData.n2 = isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2);
+                    Object.assign(qData, makeOperands(qData.type, d1, d2, isZeroMode));
                 }
 
                 questions.push(qData);
             }
 
             practiceCount++;
-            localStorage.setItem('math_pure_count', practiceCount);
+            storageSet('math_pure_count', practiceCount);
             document.getElementById('countDisplay').innerText = `累積出題：${practiceCount} 次`;
             renderAll();
         }
@@ -380,12 +457,13 @@
                 Object.assign(qData, generateFractionQuestion());
             } else {
                 qData.type = mode === 'mix' ? (index < 4 ? 'mul' : 'div') : mode;
-                qData.n1 = isZeroMode ? getTrailingZeroNum(d1) : generateNum(d1);
-                qData.n2 = isZeroMode ? getTrailingZeroNum(d2) : generateNum(d2);
+                Object.assign(qData, makeOperands(qData.type, d1, d2, isZeroMode));
             }
 
             questions[index] = qData;
             renderAll();
+            const btn = document.getElementById(`refresh-${index}`);
+            if (btn) btn.focus();
         }
 
         // ================= 歷史快照儲存 =================
@@ -394,9 +472,16 @@
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const record = { id: Date.now(), time: timeStr, data: JSON.parse(JSON.stringify(questions)) };
             historyRecords.unshift(record);
-            if (historyRecords.length > 8) historyRecords.pop();
-            localStorage.setItem('math_snapshots', JSON.stringify(historyRecords));
+            const dropped = historyRecords.length > 8;
+            if (dropped) historyRecords.pop();
+            const saved = storageSet('math_snapshots', JSON.stringify(historyRecords));
             renderHistory();
+            const status = document.getElementById('saveStatus');
+            if (status) {
+                status.textContent = !saved
+                    ? '無法寫入瀏覽器儲存空間，這組題目只保留到關閉頁面為止。'
+                    : dropped ? '已儲存。最多保留 8 組，最舊的一組已移除。' : '已儲存這組題目。';
+            }
         }
 
         function loadHistory(id) {
@@ -410,11 +495,11 @@
         function renderHistory() {
             const container = document.getElementById('historyContainer');
             if (historyRecords.length === 0) {
-                container.innerHTML = '<span class="text-indigo-300 text-sm">尚無存檔</span>';
+                container.innerHTML = '<span class="text-stone-500 text-sm">尚無存檔</span>';
                 return;
             }
             container.innerHTML = historyRecords.map((r) => `
-                <button onclick="loadHistory(${r.id})" class="text-xs bg-white text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-full hover:bg-indigo-600 hover:text-white transition shadow-sm font-bold">
+                <button onclick="loadHistory(${r.id})" class="text-sm bg-white text-stone-700 border border-stone-300 px-3 py-1.5 rounded-full hover:bg-stone-800 hover:text-white transition shadow-sm font-bold">
                     🕒 ${r.time} 紀錄
                 </button>
             `).join('');
@@ -423,6 +508,8 @@
         function toggleShow(index) {
             questions[index].show = !questions[index].show;
             renderAll();
+            const btn = document.getElementById(`reveal-${index}`);
+            if (btn) btn.focus();
         }
 
         function countTrailingZeros(num) {
@@ -433,6 +520,12 @@
 
         // ================= 各題型 HTML 渲染引擎 =================
 
+        // 未展開：只有題目。展開：答案出現在題目右側，詳解在題目下方
+        function splitReveal(show, left, answer, detail) {
+            if (!show) return `<div class="w-full">${left}</div>`;
+            return `<div class="w-full"><div class="answer-row"><div class="answer-q">${left}</div><div class="answer-a">＝ ${answer}</div></div>${detail}</div>`;
+        }
+
         // 1. 簡化計算引擎 (擴充減法功能)
         function buildSimplifyHTML(q, show) {
             const nums = q.nums;
@@ -441,7 +534,7 @@
             let finalAns = 0;
 
             if (q.subType === 'add') {
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} ＋ ${nums[1]} ＋ ${nums[2]} ＝ ？</div>`;
+                titleText = `<div class="q-title mb-2">${nums[0]} ＋ ${nums[1]} ＋ ${nums[2]} ＝ ？</div>`;
                 let p1 = 0, p2 = 1, p3 = 2;
                 if ((nums[0] + nums[1]) % 10 === 0) { p1 = 0; p2 = 1; p3 = 2; }
                 else if ((nums[0] + nums[2]) % 10 === 0) { p1 = 0; p2 = 2; p3 = 1; }
@@ -452,9 +545,9 @@
                     先將尾數能湊成十的組合圈起來：<br>
                     <span class="underline">${nums[p1]} ＋ ${nums[p2]} ＝ ${nums[p1] + nums[p2]}</span><br>
                     再加入第三個數：<br>
-                    ${nums[p1] + nums[p2]} ＋ ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+                    ${nums[p1] + nums[p2]} ＋ ${nums[p3]} ＝ <span class="text-orange-700 font-bold">${finalAns}</span>`;
             } else if (q.subType === 'mul') {
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} × ${nums[1]} × ${nums[2]} ＝ ？</div>`;
+                titleText = `<div class="q-title mb-2">${nums[0]} × ${nums[1]} × ${nums[2]} ＝ ？</div>`;
                 let p1 = 0, p2 = 1, p3 = 2;
                 const checkPair = (a, b) => (a*b===100 || a*b===1000 || a*b===10 || a*b===40);
                 if (checkPair(nums[0], nums[1])) { p1 = 0; p2 = 1; p3 = 2; }
@@ -466,20 +559,20 @@
                     先找乘法好朋友組合：<br>
                     <span class="underline">${nums[p1]} × ${nums[p2]} ＝ ${nums[p1] * nums[p2]}</span><br>
                     接著計算：<br>
-                    ${nums[p1] * nums[p2]} × ${nums[p3]} ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+                    ${nums[p1] * nums[p2]} × ${nums[p3]} ＝ <span class="text-orange-700 font-bold">${finalAns}</span>`;
             } else if (q.subType === 'sub_two') {
                 // 連減法：A - B - C = A - (B + C)
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} － ${nums[1]} － ${nums[2]} ＝ ？</div>`;
+                titleText = `<div class="q-title mb-2">${nums[0]} － ${nums[1]} － ${nums[2]} ＝ ？</div>`;
                 finalAns = nums[0] - nums[1] - nums[2];
                 stepHtml = `
                     <span class="text-red-600 font-bold">💡 連減想法（去括號法則）：</span><br>
                     連續減去兩個數，等於【減去這兩數的和】：<br>
                     式子變成：${nums[0]} － <span class="underline">(${nums[1]} ＋ ${nums[2]})</span><br>
                     ＝ ${nums[0]} － ${nums[1] + nums[2]}<br>
-                    ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+                    ＝ <span class="text-orange-700 font-bold">${finalAns}</span>`;
             } else if (q.subType === 'sub_near') {
                 // 接近整百：A - 99 = A - 100 + 1
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${nums[0]} － ${nums[1]} ＝ ？</div>`;
+                titleText = `<div class="q-title mb-2">${nums[0]} － ${nums[1]} ＝ ？</div>`;
                 finalAns = nums[0] - nums[1];
                 let adjust = nums[1] === 99 ? 1 : 2;
                 stepHtml = `
@@ -487,19 +580,16 @@
                     把 －${nums[1]} 當作先減去 100，再【加回 ${adjust}】！<br>
                     式子變成：${nums[0]} － 100 ＋ ${adjust}<br>
                     ＝ ${nums[0] - 100} ＋ ${adjust}<br>
-                    ＝ <span class="text-blue-600 font-bold">${finalAns}</span>`;
+                    ＝ <span class="text-orange-700 font-bold">${finalAns}</span>`;
             }
 
             return `
-                <div class="w-full flex flex-col items-center">
-                    ${titleText}
-                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
-                        <div class="text-xs text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
+                ${splitReveal(show, titleText, finalAns, `
+                    <div class="detail-show w-full mt-2">
+                        <div class="text-sm text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
                             ${stepHtml}
                         </div>
-                    </div>
-                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${finalAns}</div>
-                </div>`;
+                    </div>`)}`;
         }
 
         // 2. 時間換算引擎 (全面擴充複名數、未滿一日/時/分題型)
@@ -509,7 +599,7 @@
             let finalAnsText = "";
 
             if (q.subType === 'compound_to_small') {
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${q.vBig} ${q.unitPair.big} ${q.vSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.small}</div>`;
+                titleText = `<div class="q-title mb-2">${q.vBig} ${q.unitPair.big} ${q.vSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.small}</div>`;
                 const calculated = q.vBig * q.unitPair.rate;
                 finalAnsText = `${calculated + q.vSmall} ${q.unitPair.small}`;
                 stepHtml = `
@@ -517,9 +607,9 @@
                     先將大單位換算出來：<br>
                     ${q.vBig} ${q.unitPair.big} ＝ ${q.unitPair.rate} × ${q.vBig} ＝ ${calculated} ${q.unitPair.small}<br>
                     最後加上原本的：<br>
-                    ${calculated} ＋ ${q.vSmall} ＝ <span class="text-blue-600 font-bold">${calculated + q.vSmall}</span> ${q.unitPair.small}`;
+                    ${calculated} ＋ ${q.vSmall} ＝ <span class="text-orange-700 font-bold">${calculated + q.vSmall}</span> ${q.unitPair.small}`;
             } else if (q.subType === 'small_to_compound') {
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
+                titleText = `<div class="q-title mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
                 const bigVal = Math.floor(q.totalSmall / q.unitPair.rate);
                 const smallVal = q.totalSmall % q.unitPair.rate;
                 finalAnsText = `${bigVal} ${q.unitPair.big} ${smallVal} ${q.unitPair.small}`;
@@ -530,25 +620,22 @@
                     商數就是【${q.unitPair.big}】，餘數就是剩下來的【${q.unitPair.small}】。`;
             } else if (q.subType === 'under_one_unit') {
                 // 特殊：未滿一日/時/分
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
+                titleText = `<div class="q-title mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
                 finalAnsText = `0 ${q.unitPair.big} ${q.totalSmall} ${q.unitPair.small}`;
                 stepHtml = `
                     <span class="text-red-600 font-bold">💡 教學核心：未滿一單位</span><br>
                     因為總數 <span class="text-red-600 font-bold">${q.totalSmall}</span> 小於進位標準 ${q.unitPair.rate}，不夠換成 1 ${q.unitPair.big}！<br>
-                    算式：${q.totalSmall} ÷ ${q.unitPair.rate} ＝ <span class="text-blue-600 font-bold">0</span> ... <span class="text-blue-600 font-bold">${q.totalSmall}</span><br>
+                    算式：${q.totalSmall} ÷ ${q.unitPair.rate} ＝ <span class="text-orange-700 font-bold">0</span> ... <span class="text-orange-700 font-bold">${q.totalSmall}</span><br>
                     因此換算結果為：<span class="font-bold">0 ${q.unitPair.big}</span> 剩餘 <span class="font-bold">${q.totalSmall} ${q.unitPair.small}</span>。`;
             }
 
             return `
-                <div class="w-full flex flex-col items-center">
-                    ${titleText}
-                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
-                        <div class="text-xs text-left bg-amber-50 text-amber-950 border border-amber-200 p-3 rounded-lg leading-relaxed font-sans">
+                ${splitReveal(show, titleText, finalAnsText, `
+                    <div class="detail-show w-full mt-2">
+                        <div class="text-sm text-left bg-amber-50 text-amber-950 border border-amber-200 p-3 rounded-lg leading-relaxed font-sans">
                             ${stepHtml}
                         </div>
-                    </div>
-                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${finalAnsText}</div>
-                </div>`;
+                    </div>`)}`;
         }
 
         // 題目區橫式提示 (鷹架)：只列算式、答案留空，勾選才顯示
@@ -577,7 +664,7 @@
             } else {
                 inner = `<div class="grid grid-cols-2 gap-3">${list(`${q.a} × 幾`, q.a, '×', 5, 'grid-cols-1')}${list(`${q.b} × 幾`, q.b, '×', 5, 'grid-cols-1')}</div>`;
             }
-            return `<div class="w-full text-xs bg-white border border-dashed border-violet-300 rounded-lg p-2 mt-1">${inner}</div>`;
+            return `<div class="w-full text-sm bg-white border border-dashed border-orange-300 rounded-lg p-2 mt-1">${inner}</div>`;
         }
 
         // 3. 因數／倍數／公因數／公倍數引擎 (含乘除法算式輔助)
@@ -588,7 +675,7 @@
 
             if (q.subType === 'factors') {
                 const n = q.n;
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${n} 的因數有哪些？</div>`;
+                titleText = `<div class="q-title mb-2">${n} 的因數有哪些？</div>`;
                 const factors = [];
                 let rows = "";
                 for (let i = 1; i <= n; i++) {
@@ -596,16 +683,16 @@
                         factors.push(i);
                         rows += `<div class="text-emerald-700 font-bold">${n}÷${i}＝${n / i} ✓</div>`;
                     } else {
-                        rows += `<div class="text-gray-400">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
+                        rows += `<div class="text-stone-500">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
                     }
                 }
                 aidHtml = `
                     <span class="text-red-600 font-bold">💡 輔助算式（逐一測試除法，整除的就是因數）：</span>
-                    <div class="grid grid-cols-3 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
                 answerHtml = `${factors.join('、')}（共 ${factors.length} 個）`;
             } else if (q.subType === 'multiples') {
                 const n = q.n, count = q.count;
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${n} 的倍數有哪些？(請寫出前 ${count} 個)</div>`;
+                titleText = `<div class="q-title mb-2">${n} 的倍數有哪些？(請寫出前 ${count} 個)</div>`;
                 const mults = [];
                 let rows = "";
                 for (let i = 1; i <= count; i++) {
@@ -618,17 +705,17 @@
                 answerHtml = `${mults.join('、')}`;
             } else if (q.subType === 'factors_range') {
                 const { n, lo, hi } = q;
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">在 ${lo} 至 ${hi} 之間（含 ${lo} 和 ${hi}）的 ${n} 的因數有哪些？</div>`;
+                titleText = `<div class="q-title mb-2">在 ${lo} 至 ${hi} 之間（含 ${lo} 和 ${hi}）的 ${n} 的因數有哪些？</div>`;
                 const factors = divisorsOf(n);
                 const picked = factors.filter(d => d >= lo && d <= hi);
                 const chips = factors.map(d => picked.includes(d)
                     ? `<span class="text-emerald-700 font-bold underline">${d}</span>`
-                    : `<span class="text-gray-400">${d}</span>`).join('、');
+                    : `<span class="text-stone-500">${d}</span>`).join('、');
                 let rows = "";
                 for (let i = lo; i <= hi; i++) {
                     rows += n % i === 0
                         ? `<div class="text-emerald-700 font-bold">${n}÷${i}＝${n / i} ✓</div>`
-                        : `<div class="text-gray-400">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
+                        : `<div class="text-stone-500">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
                 }
                 aidHtml = `
                     <span class="text-red-600 font-bold">💡 輔助算式（只測試 ${lo}～${hi}，含 ${lo} 和 ${hi}）：</span>
@@ -637,7 +724,7 @@
                 answerHtml = `${picked.join('、')}`;
             } else if (q.subType === 'multiples_range') {
                 const { n, lo, hi } = q;
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">在 ${lo} 到 ${hi} 之間（含 ${lo} 和 ${hi}）的 ${n} 的倍數有哪些？</div>`;
+                titleText = `<div class="q-title mb-2">在 ${lo} 到 ${hi} 之間（含 ${lo} 和 ${hi}）的 ${n} 的倍數有哪些？</div>`;
                 const startK = Math.max(1, Math.floor(lo / n));
                 const picked = [];
                 let rows = "";
@@ -645,7 +732,7 @@
                     const v = n * k;
                     const inRange = v >= lo && v <= hi;
                     if (inRange) picked.push(v);
-                    rows += `<div class="${inRange ? 'text-emerald-700 font-bold' : 'text-gray-400'}">${n}×${k}＝${v}${inRange ? ' ✓' : ''}</div>`;
+                    rows += `<div class="${inRange ? 'text-emerald-700 font-bold' : 'text-stone-500'}">${n}×${k}＝${v}${inRange ? ' ✓' : ''}</div>`;
                 }
                 aidHtml = `
                     <span class="text-red-600 font-bold">💡 輔助算式（先估計起點，含 ${lo} 和 ${hi}）：</span><br>
@@ -654,16 +741,16 @@
                 answerHtml = `${picked.join('、')}`;
             } else if (q.subType === 'common_factors') {
                 const a = q.a, b = q.b;
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${a} 和 ${b} 的公因數有哪些？</div>`;
+                titleText = `<div class="q-title mb-2">${a} 和 ${b} 的公因數有哪些？</div>`;
                 const factorsA = [], factorsB = [];
                 let rowsA = "", rowsB = "";
                 for (let i = 1; i <= a; i++) {
                     if (a % i === 0) { factorsA.push(i); rowsA += `<div class="text-emerald-700 font-bold">${a}÷${i}＝${a / i} ✓</div>`; }
-                    else { rowsA += `<div class="text-gray-400">${a}÷${i}＝${Math.floor(a / i)}...${a % i}</div>`; }
+                    else { rowsA += `<div class="text-stone-500">${a}÷${i}＝${Math.floor(a / i)}...${a % i}</div>`; }
                 }
                 for (let i = 1; i <= b; i++) {
                     if (b % i === 0) { factorsB.push(i); rowsB += `<div class="text-emerald-700 font-bold">${b}÷${i}＝${b / i} ✓</div>`; }
-                    else { rowsB += `<div class="text-gray-400">${b}÷${i}＝${Math.floor(b / i)}...${b % i}</div>`; }
+                    else { rowsB += `<div class="text-stone-500">${b}÷${i}＝${Math.floor(b / i)}...${b % i}</div>`; }
                 }
                 const common = factorsA.filter(x => factorsB.includes(x));
                 const g = gcdCalc(a, b);
@@ -678,16 +765,16 @@
             } else {
                 const a = q.a, b = q.b, count = q.count;
                 const l = lcmCalc(a, b);
-                titleText = `<div class="text-base font-bold text-gray-700 mb-2">${a} 和 ${b} 的公倍數有哪些？(請寫出前 ${count} 個)</div>`;
+                titleText = `<div class="q-title mb-2">${a} 和 ${b} 的公倍數有哪些？(請寫出前 ${count} 個)</div>`;
                 const limit = l * count;
                 let rowsA = "", rowsB = "";
                 for (let i = 1; a * i <= limit; i++) {
                     const isCommon = (a * i) % l === 0;
-                    rowsA += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-gray-400'}">${a}×${i}＝${a * i}${isCommon ? ' ✓' : ''}</div>`;
+                    rowsA += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-stone-500'}">${a}×${i}＝${a * i}${isCommon ? ' ✓' : ''}</div>`;
                 }
                 for (let i = 1; b * i <= limit; i++) {
                     const isCommon = (b * i) % l === 0;
-                    rowsB += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-gray-400'}">${b}×${i}＝${b * i}${isCommon ? ' ✓' : ''}</div>`;
+                    rowsB += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-stone-500'}">${b}×${i}＝${b * i}${isCommon ? ' ✓' : ''}</div>`;
                 }
                 const commons = [];
                 for (let i = 1; i <= count; i++) commons.push(l * i);
@@ -702,16 +789,12 @@
             }
 
             return `
-                <div class="w-full flex flex-col items-center">
-                    ${titleText}
-                    ${buildFactorScaffold(q)}
-                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
-                        <div class="text-xs text-left bg-violet-50 text-violet-950 border border-violet-200 p-3 rounded-lg leading-relaxed font-sans">
+                ${splitReveal(show, `${titleText}${buildFactorScaffold(q)}`, answerHtml, `
+                    <div class="detail-show w-full mt-2">
+                        <div class="text-sm text-left bg-orange-50 text-orange-950 border border-orange-200 p-3 rounded-lg leading-relaxed font-sans">
                             ${aidHtml}
                         </div>
-                    </div>
-                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-base ${show ? 'opacity-100' : 'opacity-0'}">＝ ${answerHtml}</div>
-                </div>`;
+                    </div>`)}`;
         }
 
         // 4. 分數加減 (異分母通分) 引擎
@@ -734,7 +817,7 @@
             const simpDen = l / g;
 
             const titleText = `
-                <div class="flex items-center gap-3 text-xl font-bold text-gray-700 mb-2">
+                <div class="q-title q-title-lg flex items-center gap-3 mb-2">
                     ${fracHTML(n1, d1)}
                     <span>${op === '+' ? '＋' : '－'}</span>
                     ${fracHTML(n2, d2)}
@@ -747,20 +830,17 @@
                 ${d1} 和 ${d2} 的最小公倍數 ＝ ${l}<br>
                 通分：${n1}/${d1} ＝ ${c1}/${l}　，　${n2}/${d2} ＝ ${c2}/${l}<br>
                 計算：${c1} ${op} ${c2} ＝ ${resultNum}<br>
-                所以 ${resultNum}/${l}${g > 1 ? `，約分（分子分母同除以 ${g}）＝ <span class="text-blue-600 font-bold">${simpNum}/${simpDen}</span>` : ''}`;
+                所以 ${resultNum}/${l}${g > 1 ? `，約分（分子分母同除以 ${g}）＝ <span class="text-orange-700 font-bold">${simpNum}/${simpDen}</span>` : ''}`;
 
             const answerText = simpDen === 1 ? `${simpNum}` : `${simpNum}/${simpDen}`;
 
             return `
-                <div class="w-full flex flex-col items-center">
-                    ${titleText}
-                    <div class="${show ? 'detail-show' : 'detail-hidden'} w-full mt-2">
-                        <div class="text-xs text-left bg-cyan-50 text-cyan-950 border border-cyan-200 p-3 rounded-lg leading-relaxed font-sans">
+                ${splitReveal(show, titleText, answerText, `
+                    <div class="detail-show w-full mt-2">
+                        <div class="text-sm text-left bg-stone-100 text-stone-900 border border-stone-300 p-3 rounded-lg leading-relaxed font-sans">
                             ${aidHtml}
                         </div>
-                    </div>
-                    <div class="mt-auto pt-4 text-center text-blue-600 font-bold text-xl ${show ? 'opacity-100' : 'opacity-0'}">＝ ${answerText}</div>
-                </div>`;
+                    </div>`)}`;
         }
 
         // 5. 常規直式：乘法引擎 (頂部進位)
@@ -776,7 +856,7 @@
             if (z1 > 0 || z2 > 0) {
                 const sN1 = n1 / Math.pow(10, z1);
                 const sN2 = n2 / Math.pow(10, z2);
-                simplifyTip = `<div class="mt-3 text-xs bg-emerald-50 text-emerald-800 p-2 rounded border border-emerald-100 font-bold whitespace-normal leading-normal">💡 簡化想法：先算 ${sN1} × ${sN2} ＝ ${sN1 * sN2}，最後尾數再補上 ${z1 + z2} 個 0。</div>`;
+                simplifyTip = `<div class="mt-3 text-sm bg-emerald-50 text-emerald-800 p-2 rounded border border-emerald-100 font-bold whitespace-normal leading-normal">💡 簡化想法：先算 ${sN1} × ${sN2} ＝ ${sN1 * sN2}，最後尾數再補上 ${z1 + z2} 個 0。</div>`;
             }
 
             let carryHTML = "";
@@ -814,17 +894,20 @@
                 }
             }
             
-            let carryContainer = carryHTML !== "" ? `<div class="${show ? 'detail-show' : 'detail-hidden'}">${carryHTML}</div>` : "";
+            let carryContainer = (show && carryHTML !== "") ? `<div class="detail-show">${carryHTML}</div>` : "";
             let baseMath = `<div>` + " ".repeat(width - n1Str.length) + n1Str + "\n" + " ".repeat(width - n2Str.length - 2) + "× " + n2Str + "\n" + "-".repeat(width) + `</div>`;
             
             if (validSteps > 1) {
                 detail += "-".repeat(width) + "\n";
-                detail += `<span class="text-blue-600 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
+                detail += `<span class="text-orange-700 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
             } else {
-                detail += `<span class="text-blue-600 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
+                detail += `<span class="text-orange-700 font-bold">` + " ".repeat(width - ansStr.length) + ansStr + `</span>\n`;
             }
 
-            return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${carryContainer}${baseMath}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
+            return splitReveal(show,
+                `<div class="math-font px-2 text-left">${carryContainer}${baseMath}</div>`,
+                ansStr,
+                `<div class="math-font px-2 text-left"><div class="detail-show text-gray-600">${detail}</div></div>${simplifyTip}`);
         }
 
         // 6. 常規直式：除法引擎
@@ -844,12 +927,14 @@
                 const sN2 = n2 / Math.pow(10, commonZeros);
                 const sR = sN1 % sN2;
                 let rTip = r > 0 ? `，簡化餘數 ${sR} 要放大 ${Math.pow(10, commonZeros)} 倍變成實質餘數 ${r}` : "（剛好整除）";
-                simplifyTip = `<div class="mt-3 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-100 font-bold whitespace-normal leading-normal">💡 簡化想法：被除數與除數同時劃掉 ${commonZeros} 個 0，變成算 ${sN1} ÷ ${sN2}${rTip}。</div>`;
+                simplifyTip = `<div class="mt-3 text-sm bg-amber-50 text-amber-800 p-2 rounded border border-amber-100 font-bold whitespace-normal leading-normal">💡 簡化想法：被除數與除數同時劃掉 ${commonZeros} 個 0，變成算 ${sN1} ÷ ${sN2}${rTip}。</div>`;
             }
 
             let outTop = "";
             const qPad = preLen + n1Str.length - q.length;
-            outTop += `<div class="${show ? 'opacity-100' : 'opacity-0'} text-blue-600 font-bold transition-opacity">` + " ".repeat(qPad) + q + "</div>";
+            outTop += show
+                ? `<div class="text-orange-700 font-bold">` + " ".repeat(qPad) + q + "</div>"
+                : `<div> </div>`;
             
             let outBase = "";
             outBase += " ".repeat(preLen) + "-".repeat(n1Str.length) + "\n";
@@ -896,34 +981,34 @@
             }
 
             if (r > 0) {
-                detail += `\n<span class="text-amber-600 font-bold text-xs"> (餘數為 ${r})</span>`;
+                detail += `\n<span class="text-amber-600 font-bold text-sm"> (餘數為 ${r})</span>`;
             }
 
-            return `<div class="math-font flex flex-col w-full px-2"><div class="text-left">${outTop}${outBase}<div class="${show ? 'detail-show' : 'detail-hidden'} text-gray-600">${detail}</div></div>${show ? simplifyTip : ''}</div>`;
+            return splitReveal(show,
+                `<div class="math-font px-2 text-left"><div> </div>${outBase}</div>`,
+                `${q}${r > 0 ? `　餘 ${r}` : ''}`,
+                `<div class="math-font px-2 text-left"><div class="detail-show text-gray-600">${detail}</div></div>${simplifyTip}`);
         }
 
         // ================= 畫面渲染主引擎 =================
-        function renderAll() {
-            const container = document.getElementById('quizContainer');
-            container.innerHTML = '';
-
-            questions.forEach((q, index) => {
+        // 依 show 決定是否內嵌解答；畫面、列印題目、列印答案卷共用
+        function cardParts(q, show) {
                 let mathContent = "";
                 let typeLabel = "";
 
                 if (q.type === 'simplify') {
-                    mathContent = buildSimplifyHTML(q, q.show);
+                    mathContent = buildSimplifyHTML(q, show);
                     if (q.subType === 'add') typeLabel = '加法簡化';
                     else if (q.subType === 'mul') typeLabel = '乘法簡化';
                     else if (q.subType === 'sub_two') typeLabel = '減法簡化(連減)';
                     else if (q.subType === 'sub_near') typeLabel = '減法簡化(補數)';
                 } else if (q.type === 'time') {
-                    mathContent = buildTimeHTML(q, q.show);
+                    mathContent = buildTimeHTML(q, show);
                     if (q.subType === 'compound_to_small') typeLabel = '時間：複名數換算';
                     else if (q.subType === 'small_to_compound') typeLabel = '時間：單位進位';
                     else if (q.subType === 'under_one_unit') typeLabel = '時間：未滿一單位';
                 } else if (q.type === 'factor') {
-                    mathContent = buildFactorHTML(q, q.show);
+                    mathContent = buildFactorHTML(q, show);
                     if (q.subType === 'factors') typeLabel = '因數';
                     else if (q.subType === 'multiples') typeLabel = '倍數';
                     else if (q.subType === 'factors_range') typeLabel = '因數(限範圍)';
@@ -931,34 +1016,66 @@
                     else if (q.subType === 'common_factors') typeLabel = '公因數';
                     else if (q.subType === 'common_multiples') typeLabel = '公倍數';
                 } else if (q.type === 'fraction') {
-                    mathContent = buildFractionHTML(q, q.show);
+                    mathContent = buildFractionHTML(q, show);
                     typeLabel = q.op === '+' ? '分數加法(異分母)' : '分數減法(異分母)';
                 } else if (q.type === 'mul') {
-                    mathContent = buildMulHTML(q.n1, q.n2, q.show);
+                    mathContent = buildMulHTML(q.n1, q.n2, show);
                     typeLabel = '乘法直式';
                 } else if (q.type === 'div') {
-                    mathContent = buildDivHTML(q.n1, q.n2, q.show);
+                    mathContent = buildDivHTML(q.n1, q.n2, show);
                     typeLabel = '除法直式';
                 }
-                
+                return { mathContent, typeLabel };
+        }
+
+        // 列印：題目卷不含任何解答；答案卷展開全部解法。內容與畫面上的展開狀態無關
+        function printSheet(kind) {
+            if (!questions.length) return;
+            const withAnswers = kind === 'answers';
+            const cells = questions.map((q, index) => {
+                const { mathContent, typeLabel } = cardParts(q, withAnswers);
+                return `<section class="print-cell"><div class="print-label">${q.label} [${typeLabel}]</div><div class="print-body">${mathContent}</div></section>`;
+            }).join('');
+            const area = document.getElementById('printArea');
+            area.innerHTML = `
+                <div class="print-head">
+                    <h2>${withAnswers ? '答案卷' : '數學練習'}</h2>
+                    <span class="print-fill">班級：________　姓名：________　日期：________</span>
+                </div>
+                <div class="print-grid">${cells}</div>`;
+            const clear = () => { area.innerHTML = ''; window.removeEventListener('afterprint', clear); };
+            window.addEventListener('afterprint', clear);
+            window.print();
+        }
+
+        function renderAll() {
+            const container = document.getElementById('quizContainer');
+            let cards = '';
+
+            questions.forEach((q, index) => {
+                const { mathContent, typeLabel } = cardParts(q, q.show);
+
                 const cardHtml = `
-                    <div onclick="toggleShow(${index})" class="bg-white border border-gray-200 rounded-xl p-5 min-h-[420px] shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex flex-col relative group">
-                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
-                            <span class="text-blue-600 font-bold text-sm bg-blue-50 border border-blue-100 px-2 py-1 rounded shadow-sm">${q.label} [${typeLabel}]</span>
-                            <button onclick="refreshOne(event, ${index})" class="text-gray-400 hover:text-blue-600 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100" title="單獨更換此題數字">🔄</button>
+                    <article aria-label="${q.label} ${typeLabel}" class="paper-card border border-stone-300 rounded-lg p-5 min-h-[420px] hover:border-orange-400 transition-colors flex flex-col relative group">
+                        <div class="flex justify-between items-center pb-2 mb-4">
+                            <span class="text-orange-700 font-bold text-sm bg-orange-50 border border-orange-100 px-2 py-1 rounded shadow-sm">${q.label} [${typeLabel}]</span>
+                            <button id="refresh-${index}" type="button" onclick="refreshOne(event, ${index})" class="refresh-btn text-stone-500 hover:text-orange-700 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" aria-label="單獨更換${q.label}的數字" title="單獨更換此題數字">🔄</button>
                         </div>
                         
-                        <div class="flex-1 flex justify-center w-full items-start mt-2">
+                        <div id="answer-${index}" class="flex-1 flex justify-center w-full items-start mt-2">
                             ${mathContent}
                         </div>
 
-                        <div class="mt-4 pt-3 border-t border-gray-50 text-center text-xs text-gray-400">
-                            點擊卡片顯示詳細思維解法
+                        <div class="mt-4 pt-3 text-center">
+                            <button id="reveal-${index}" type="button" onclick="toggleShow(${index})" aria-expanded="${q.show}" aria-controls="answer-${index}" class="text-sm font-bold text-orange-900 bg-white border border-orange-300 hover:bg-orange-50 px-4 py-1.5 rounded-md transition">
+                                ${q.show ? '隱藏解答' : '顯示解答與解法'}
+                            </button>
                         </div>
-                    </div>
+                    </article>
                 `;
-                container.innerHTML += cardHtml;
+                cards += cardHtml;
             });
+            container.innerHTML = cards;
         }
     </script>
 </body>
