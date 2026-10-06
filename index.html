@@ -17,7 +17,6 @@
     </script>
 
     <style>
-        @media (hover: none) { .refresh-btn { opacity: 1; } }
 
         .answer-row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; width: 100%; }
         .answer-q { min-width: 0; flex: 0 1 auto; }
@@ -54,7 +53,7 @@
             letter-spacing: 0;
             white-space: pre;
         }
-        .q-title { font-family: 'IBM Plex Mono', 'Noto Sans TC', ui-monospace, monospace; font-weight: 600; font-size: 1.2rem; line-height: 1.5; color: #44403c; }
+        .q-title { font-family: 'IBM Plex Mono', 'Noto Sans TC', ui-monospace, monospace; font-weight: 600; font-size: 1.35rem; line-height: 1.5; color: #44403c; }
         .q-title-lg { font-size: 1.5rem; }
         body { margin: 0; overflow-x: hidden; background-color: var(--paper); }
         /* 素色紙質：題目卡片像一張奶油色紙 */
@@ -75,71 +74,71 @@
 
     <header class="bg-[#fffdf5] text-stone-800 border-b border-stone-300 px-6 py-4">
         <h1 class="text-xl font-bold tracking-wider">作業繳交小幫手</h1>
+        <p class="text-sm text-stone-600 mt-0.5">選題型 → 重新出題 → 列印題目，學生把題目抄進8格本。</p>
     </header>
 
     <main class="max-w-7xl mx-auto w-full p-6 flex-1 flex flex-col gap-5">
 
         <section aria-label="出題設定" class="bg-[#fffdf5] rounded-xl border border-stone-300 shadow-sm">
-            <div class="p-5 flex flex-wrap gap-x-6 gap-y-4 items-end justify-between">
-                <div class="flex flex-wrap gap-x-6 gap-y-4 items-end">
+            <div class="p-5 flex flex-wrap gap-x-6 gap-y-4 items-end">
+                <div class="flex flex-col gap-1">
+                    <label for="modeSelect" class="text-stone-700 font-bold text-sm">題型</label>
+                    <select id="modeSelect" class="border border-stone-300 bg-white rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-orange-500">
+                    <optgroup label="基礎直式">
+                        <option value="mix" data-short="乘除混合" data-desc="乘法與除法各 4 題。">混合 (乘除各半)</option>
+                        <option value="mul" data-short="乘法" data-desc="8 題直式乘法。">純乘法</option>
+                        <option value="div" data-short="除法" data-desc="8 題直式除法，被除數一定不小於除數。">純除法</option>
+                    </optgroup>
+                    <optgroup label="特別單元">
+                        <option value="simplify" data-short="簡化計算" data-desc="四則運算與減法湊整的速算。">簡化計算</option>
+                        <option value="time" data-short="時間換算" data-desc="複名數與日、時、分、秒的進退位。">時間換算</option>
+                        <option value="factors" data-short="因數" data-desc="找出一個數的所有因數。">因數</option>
+                        <option value="multiples" data-short="倍數" data-desc="依序寫出一個數的倍數。">倍數</option>
+                        <option value="commonFactor" data-short="公因數" data-desc="找出兩個數的公因數與最大公因數。">公因數</option>
+                        <option value="commonMultiple" data-short="公倍數" data-desc="找出兩個數的公倍數與最小公倍數。">公倍數</option>
+                        <option value="factorMix" data-short="因數倍數混合" data-desc="因數題的數在 60 以內，倍數題的數在 19 以內。">因數倍數混合</option>
+                        <option value="factorRange" data-short="限範圍因數倍數" data-desc="例如：在 15 至 20 之間的 45 的因數。">限定範圍的因數倍數</option>
+                        <option value="fraction" data-short="分數加減" data-desc="異分母分數加減，需要先通分。">分數加減 (異分母)</option>
+                    </optgroup>
+                    </select>
+                </div>
+                <div id="digitSettings" class="flex items-end gap-3 text-stone-700 font-bold text-sm">
                     <div class="flex flex-col gap-1">
-                        <label for="modeSelect" class="text-stone-700 font-bold text-sm">題型</label>
-                        <select id="modeSelect" class="border border-stone-300 bg-white rounded-md px-3 py-1.5 outline-none focus:ring-2 focus:ring-orange-500">
-                            <optgroup label="基礎直式">
-                                <option value="mix" data-short="乘除混合" data-desc="乘法與除法各 4 題。">混合 (乘除各半)</option>
-                                <option value="mul" data-short="乘法" data-desc="8 題直式乘法。">純乘法</option>
-                                <option value="div" data-short="除法" data-desc="8 題直式除法，被除數一定不小於除數。">純除法</option>
-                            </optgroup>
-                            <optgroup label="特別單元">
-                                <option value="simplify" data-short="簡化計算" data-desc="四則運算與減法湊整的速算。">簡化計算</option>
-                                <option value="time" data-short="時間換算" data-desc="複名數與日、時、分、秒的進退位。">時間換算</option>
-                                <option value="factors" data-short="因數" data-desc="找出一個數的所有因數。">因數</option>
-                                <option value="multiples" data-short="倍數" data-desc="依序寫出一個數的倍數。">倍數</option>
-                                <option value="commonFactor" data-short="公因數" data-desc="找出兩個數的公因數與最大公因數。">公因數</option>
-                                <option value="commonMultiple" data-short="公倍數" data-desc="找出兩個數的公倍數與最小公倍數。">公倍數</option>
-                                <option value="factorMix" data-short="因數倍數混合" data-desc="因數題的數在 60 以內，倍數題的數在 19 以內。">因數倍數混合</option>
-                                <option value="factorRange" data-short="限範圍因數倍數" data-desc="例如：在 15 至 20 之間的 45 的因數。">限定範圍的因數倍數</option>
-                                <option value="fraction" data-short="分數加減" data-desc="異分母分數加減，需要先通分。">分數加減 (異分母)</option>
-                            </optgroup>
+                        <label for="d1Select">被乘數／被除數</label>
+                        <select id="d1Select" class="border border-stone-300 bg-white rounded-md px-2 py-2">
+                            <option value="3">3位</option><option value="4">4位</option><option value="5">5位</option>
                         </select>
                     </div>
-                    <div id="digitSettings" class="flex items-end gap-3 text-stone-700 font-bold text-sm">
-                        <div class="flex flex-col gap-1">
-                            <label for="d1Select">被乘數／被除數</label>
-                            <select id="d1Select" class="border border-stone-300 bg-white rounded-md px-2 py-1.5">
-                                <option value="3">3位</option><option value="4">4位</option><option value="5">5位</option>
-                            </select>
-                        </div>
-                        <span class="pb-1.5 text-lg" aria-hidden="true">×÷</span>
-                        <div class="flex flex-col gap-1">
-                            <label for="d2Select">乘數／除數</label>
-                            <select id="d2Select" class="border border-stone-300 bg-white rounded-md px-2 py-1.5">
-                                <option value="1">1位</option><option value="2" selected>2位</option><option value="3">3位</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="zeroSettings" class="flex items-center gap-2 text-orange-900 font-bold text-sm bg-orange-50 px-3 py-2 rounded-md border border-orange-200 cursor-pointer hover:bg-orange-100 transition">
-                        <input type="checkbox" id="zeroCheck" class="w-4 h-4 cursor-pointer accent-orange-700">
-                        <label for="zeroCheck" class="cursor-pointer select-none">尾數含 0 (速算練習)</label>
-                    </div>
-                    <div id="hintSettings" style="display:none" class="flex items-center gap-2 text-orange-900 font-bold text-sm bg-orange-50 px-3 py-2 rounded-md border border-orange-200 cursor-pointer hover:bg-orange-100 transition">
-                        <input type="checkbox" id="hintCheck" class="w-4 h-4 cursor-pointer accent-orange-700" onchange="renderAll()">
-                        <label for="hintCheck" class="cursor-pointer select-none">題目附橫式提示 (鷹架，不含答案)</label>
+                    <span class="pb-2 text-lg" aria-hidden="true">×÷</span>
+                    <div class="flex flex-col gap-1">
+                        <label for="d2Select">乘數／除數</label>
+                        <select id="d2Select" class="border border-stone-300 bg-white rounded-md px-2 py-2">
+                            <option value="1">1位</option><option value="2" selected>2位</option><option value="3">3位</option>
+                        </select>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2 items-center">
-                    <button onclick="printSheet('questions')" class="bg-white text-orange-900 border border-orange-300 hover:bg-orange-50 px-4 py-2 rounded-md font-bold transition">列印題目</button>
-                    <button onclick="printSheet('answers')" class="bg-white text-orange-900 border border-orange-300 hover:bg-orange-50 px-4 py-2 rounded-md font-bold transition">列印答案卷</button>
-                    <button onclick="generateAll()" class="bg-orange-700 hover:bg-orange-800 text-white px-6 py-2 rounded-md font-bold transition shadow-sm">重新出題 (8題)</button>
+                <div id="zeroSettings" class="flex items-center gap-2 pb-2 text-stone-800 font-bold text-sm">
+                    <input type="checkbox" id="zeroCheck" class="w-5 h-5 cursor-pointer accent-orange-700">
+                    <label for="zeroCheck" class="cursor-pointer select-none">尾數含 0（速算練習）</label>
                 </div>
+                <div id="hintSettings" style="display:none" class="flex items-center gap-2 pb-2 text-stone-800 font-bold text-sm">
+                    <input type="checkbox" id="hintCheck" class="w-5 h-5 cursor-pointer accent-orange-700" onchange="renderAll()">
+                    <label for="hintCheck" class="cursor-pointer select-none">附橫式提示（鷹架，不含答案）</label>
+                </div>
+                <button onclick="regenerateWithUndo()" class="ml-auto bg-orange-700 hover:bg-orange-800 text-white px-6 py-2.5 rounded-md font-bold transition">重新出題（8題）</button>
+                <p id="modeDesc" class="basis-full -mt-2 text-sm text-stone-600"></p>
             </div>
-            <p id="modeDesc" class="px-5 pb-4 -mt-2 text-sm text-stone-600"></p>
 
             <div class="border-t border-stone-300 px-5 py-3 flex flex-wrap gap-x-4 gap-y-2 items-center">
-                <h2 class="text-sm text-stone-700 font-bold">我的題組</h2>
-                <button onclick="saveCurrentToHistory()" class="bg-stone-700 hover:bg-stone-800 text-white px-3 py-1.5 rounded-md text-sm font-bold transition">儲存目前這組</button>
-                <div id="historyContainer" class="flex flex-wrap gap-2 items-center flex-1"></div>
+                <h2 class="text-sm text-stone-700 font-bold">我的題組<span class="font-normal text-stone-600">（最多 8 組）</span></h2>
+                <button onclick="saveCurrentToHistory()" class="bg-stone-700 hover:bg-stone-800 text-white px-4 min-h-[40px] rounded-md text-sm font-bold transition">儲存目前這組</button>
+                <div id="historyContainer" class="flex flex-wrap gap-2 items-center flex-1 min-w-[9rem]"></div>
                 <div id="saveStatus" role="status" class="text-sm text-stone-700 font-bold"></div>
+                <div class="flex items-center gap-1 ml-auto" role="group" aria-label="列印">
+                    <span class="text-sm text-stone-700 font-bold mr-1">列印</span>
+                    <button onclick="printSheet('questions')" class="text-sm font-bold text-orange-900 hover:bg-orange-50 px-4 min-h-[40px] rounded-md transition">題目</button>
+                    <button onclick="printSheet('answers')" class="text-sm font-bold text-orange-900 hover:bg-orange-50 px-4 min-h-[40px] rounded-md transition">答案卷</button>
+                </div>
             </div>
         </section>
 
@@ -182,8 +181,10 @@
 
         function initApp() {
             document.getElementById('modeSelect').addEventListener('change', function(e) {
+                const before = settledSnap;
                 applyModeUI(e.target.value);
                 generateAll();
+                if (before && before.questions.length) setSaveStatus('已切換題型並出新題。', () => restoreCaptured(before));
             });
 
             applyModeUI(document.getElementById('modeSelect').value);
@@ -430,9 +431,49 @@
                 : dropped ? '已儲存。最多保留 8 組，最舊的一組已移除。' : '已儲存這組題目。');
         }
 
-        function setSaveStatus(text) {
+        let statusTimer = null;
+        // 狀態訊息；附 undoFn 時顯示「復原」按鈕，數秒後自動消失
+        function setSaveStatus(text, undoFn) {
             const status = document.getElementById('saveStatus');
-            if (status) status.textContent = text;
+            if (!status) return;
+            clearTimeout(statusTimer);
+            status.textContent = text;
+            if (undoFn) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = '復原';
+                btn.className = 'ml-2 px-3 min-h-[40px] rounded-md border border-stone-400 bg-white text-stone-900 hover:bg-stone-100 transition';
+                btn.onclick = () => { undoFn(); status.textContent = '已復原。'; statusTimer = setTimeout(() => { status.textContent = ''; }, 4000); };
+                status.appendChild(btn);
+            }
+            statusTimer = setTimeout(() => { status.textContent = ''; }, undoFn ? 10000 : 6000);
+        }
+
+        // 目前題組與設定的快照，用來讓「重新出題／切換題型／讀取存檔」可以復原
+        let settledSnap = null;
+        function captureCurrent() {
+            return {
+                questions: JSON.parse(JSON.stringify(questions)),
+                mode: document.getElementById('modeSelect').value,
+                d1: document.getElementById('d1Select').value,
+                d2: document.getElementById('d2Select').value,
+                zero: document.getElementById('zeroCheck').checked
+            };
+        }
+        function restoreCaptured(s) {
+            if (!s) return;
+            document.getElementById('modeSelect').value = s.mode;
+            document.getElementById('d1Select').value = s.d1;
+            document.getElementById('d2Select').value = s.d2;
+            document.getElementById('zeroCheck').checked = s.zero;
+            applyModeUI(s.mode);
+            questions = s.questions;
+            renderAll();
+        }
+        function regenerateWithUndo() {
+            const before = settledSnap;
+            generateAll();
+            if (before && before.questions.length) setSaveStatus('已出新題。', () => restoreCaptured(before));
         }
 
         function modeShortName(mode) {
@@ -443,6 +484,7 @@
         function loadHistory(id) {
             const record = historyRecords.find(r => r.id === id);
             if (!record) return;
+            const before = settledSnap;
             // 連同當時的題型與位數一起還原，設定列才會和題目一致
             if (record.mode && modeShortName(record.mode)) {
                 document.getElementById('modeSelect').value = record.mode;
@@ -453,29 +495,36 @@
             }
             questions = JSON.parse(JSON.stringify(record.data)).map(q => ({...q, show: false}));
             renderAll();
-            setSaveStatus(`已讀取 ${record.time} 的題組。`);
+            setSaveStatus(`已讀取 ${record.time} 的題組。`, before && before.questions.length ? () => restoreCaptured(before) : null);
         }
 
         function deleteHistory(id) {
-            historyRecords = historyRecords.filter(r => r.id !== id);
+            const index = historyRecords.findIndex(r => r.id === id);
+            if (index < 0) return;
+            const [record] = historyRecords.splice(index, 1);
             const saved = storageSet('math_snapshots', JSON.stringify(historyRecords));
             renderHistory();
-            setSaveStatus(saved ? '已刪除這組存檔。' : '已從畫面移除，但無法更新瀏覽器儲存空間。');
+            setSaveStatus(saved ? '已刪除這組存檔。' : '已從畫面移除，但無法更新瀏覽器儲存空間。', () => {
+                historyRecords.splice(index, 0, record);
+                storageSet('math_snapshots', JSON.stringify(historyRecords));
+                renderHistory();
+            });
         }
 
         function renderHistory() {
             const container = document.getElementById('historyContainer');
             if (historyRecords.length === 0) {
-                container.innerHTML = '<span class="text-stone-600 text-sm">尚無存檔</span>';
+                container.innerHTML = '<span class="text-stone-600 text-sm whitespace-nowrap">尚無存檔</span>';
                 return;
             }
             container.innerHTML = historyRecords.map((r) => {
                 const name = modeShortName(r.mode);
-                const label = `${r.time}${name ? '・' + name : ''}`;
+                const digits = (['mix', 'mul', 'div'].includes(r.mode) && r.d1 && r.d2) ? ` ${r.d1}位${r.mode === 'div' ? '÷' : r.mode === 'mul' ? '×' : '×÷'}${r.d2}位` : '';
+                const label = `${r.time}・${name}${digits}`;
                 return `
                 <span class="inline-flex items-stretch bg-white border border-stone-300 rounded-full overflow-hidden text-sm font-bold text-stone-700">
-                    <button type="button" onclick="loadHistory(${r.id})" class="pl-3 pr-2 py-1 hover:bg-stone-800 hover:text-white transition" aria-label="讀取 ${label}">${label}</button>
-                    <button type="button" onclick="deleteHistory(${r.id})" class="pl-1.5 pr-2.5 py-1 text-stone-600 hover:bg-red-700 hover:text-white transition" aria-label="刪除 ${label}" title="刪除這組存檔">×</button>
+                    <button type="button" onclick="loadHistory(${r.id})" class="pl-4 pr-2 min-h-[40px] hover:bg-stone-800 hover:text-white transition" aria-label="讀取 ${label}">${label}</button>
+                    <button type="button" onclick="deleteHistory(${r.id})" class="px-3.5 min-h-[40px] text-stone-600 hover:bg-red-700 hover:text-white transition" aria-label="刪除 ${label}" title="刪除這組存檔">×</button>
                 </span>`;
             }).join('');
         }
@@ -516,7 +565,7 @@
                 else { p1 = 1; p2 = 2; p3 = 0; }
                 finalAns = nums[0] + nums[1] + nums[2];
                 stepHtml = `
-                    <span class="text-red-600 font-bold">湊整想法（交換律）：</span><br>
+                    <span class="text-stone-900 font-bold">湊整想法（交換律）：</span><br>
                     先將尾數能湊成十的組合圈起來：<br>
                     <span class="underline">${nums[p1]} ＋ ${nums[p2]} ＝ ${nums[p1] + nums[p2]}</span><br>
                     再加入第三個數：<br>
@@ -530,7 +579,7 @@
                 else { p1 = 1; p2 = 2; p3 = 0; }
                 finalAns = nums[0] * nums[1] * nums[2];
                 stepHtml = `
-                    <span class="text-red-600 font-bold">湊整想法（結合律）：</span><br>
+                    <span class="text-stone-900 font-bold">湊整想法（結合律）：</span><br>
                     先找乘法好朋友組合：<br>
                     <span class="underline">${nums[p1]} × ${nums[p2]} ＝ ${nums[p1] * nums[p2]}</span><br>
                     接著計算：<br>
@@ -540,7 +589,7 @@
                 titleText = `<div class="q-title mb-2">${nums[0]} － ${nums[1]} － ${nums[2]} ＝ ？</div>`;
                 finalAns = nums[0] - nums[1] - nums[2];
                 stepHtml = `
-                    <span class="text-red-600 font-bold">連減想法（去括號法則）：</span><br>
+                    <span class="text-stone-900 font-bold">連減想法（去括號法則）：</span><br>
                     連續減去兩個數，等於【減去這兩數的和】：<br>
                     式子變成：${nums[0]} － <span class="underline">(${nums[1]} ＋ ${nums[2]})</span><br>
                     ＝ ${nums[0]} － ${nums[1] + nums[2]}<br>
@@ -551,7 +600,7 @@
                 finalAns = nums[0] - nums[1];
                 let adjust = nums[1] === 99 ? 1 : 2;
                 stepHtml = `
-                    <span class="text-red-600 font-bold">接近整百速算：</span><br>
+                    <span class="text-stone-900 font-bold">接近整百速算：</span><br>
                     把 －${nums[1]} 當作先減去 100，再【加回 ${adjust}】！<br>
                     式子變成：${nums[0]} － 100 ＋ ${adjust}<br>
                     ＝ ${nums[0] - 100} ＋ ${adjust}<br>
@@ -561,7 +610,7 @@
             return `
                 ${splitReveal(show, titleText, finalAns, `
                     <div class="detail-show w-full mt-2">
-                        <div class="text-sm text-left bg-emerald-50 text-emerald-900 border border-emerald-200 p-3 rounded-lg leading-relaxed font-sans">
+                        <div class="text-sm text-left bg-[#f6efdc] text-stone-900 border border-stone-300 p-3 rounded-lg leading-relaxed font-sans">
                             ${stepHtml}
                         </div>
                     </div>`)}`;
@@ -578,7 +627,7 @@
                 const calculated = q.vBig * q.unitPair.rate;
                 finalAnsText = `${calculated + q.vSmall} ${q.unitPair.small}`;
                 stepHtml = `
-                    <span class="text-red-600 font-bold">複名數拆解（大變小）：</span><br>
+                    <span class="text-stone-900 font-bold">複名數拆解（大變小）：</span><br>
                     先將大單位換算出來：<br>
                     ${q.vBig} ${q.unitPair.big} ＝ ${q.unitPair.rate} × ${q.vBig} ＝ ${calculated} ${q.unitPair.small}<br>
                     最後加上原本的：<br>
@@ -589,7 +638,7 @@
                 const smallVal = q.totalSmall % q.unitPair.rate;
                 finalAnsText = `${bigVal} ${q.unitPair.big} ${smallVal} ${q.unitPair.small}`;
                 stepHtml = `
-                    <span class="text-red-600 font-bold">複名數歸納（小變大）：</span><br>
+                    <span class="text-stone-900 font-bold">複名數歸納（小變大）：</span><br>
                     每 ${q.unitPair.rate} ${q.unitPair.small} 可以進位成 1 ${q.unitPair.big}。<br>
                     算式：${q.totalSmall} ÷ ${q.unitPair.rate} ＝ ${bigVal} ... ${smallVal}<br>
                     商數就是【${q.unitPair.big}】，餘數就是剩下來的【${q.unitPair.small}】。`;
@@ -598,8 +647,8 @@
                 titleText = `<div class="q-title mb-2">${q.totalSmall} ${q.unitPair.small} ＝ (   ) ${q.unitPair.big} (   ) ${q.unitPair.small}</div>`;
                 finalAnsText = `0 ${q.unitPair.big} ${q.totalSmall} ${q.unitPair.small}`;
                 stepHtml = `
-                    <span class="text-red-600 font-bold">教學核心：未滿一單位</span><br>
-                    因為總數 <span class="text-red-600 font-bold">${q.totalSmall}</span> 小於進位標準 ${q.unitPair.rate}，不夠換成 1 ${q.unitPair.big}！<br>
+                    <span class="text-stone-900 font-bold">教學核心：未滿一單位</span><br>
+                    因為總數 <span class="text-stone-900 font-bold">${q.totalSmall}</span> 小於進位標準 ${q.unitPair.rate}，不夠換成 1 ${q.unitPair.big}！<br>
                     算式：${q.totalSmall} ÷ ${q.unitPair.rate} ＝ <span class="text-orange-700 font-bold">0</span> ... <span class="text-orange-700 font-bold">${q.totalSmall}</span><br>
                     因此換算結果為：<span class="font-bold">0 ${q.unitPair.big}</span> 剩餘 <span class="font-bold">${q.totalSmall} ${q.unitPair.small}</span>。`;
             }
@@ -607,7 +656,7 @@
             return `
                 ${splitReveal(show, titleText, finalAnsText, `
                     <div class="detail-show w-full mt-2">
-                        <div class="text-sm text-left bg-amber-50 text-amber-950 border border-amber-200 p-3 rounded-lg leading-relaxed font-sans">
+                        <div class="text-sm text-left bg-[#f6efdc] text-stone-900 border border-stone-300 p-3 rounded-lg leading-relaxed font-sans">
                             ${stepHtml}
                         </div>
                     </div>`)}`;
@@ -656,13 +705,13 @@
                 for (let i = 1; i <= n; i++) {
                     if (n % i === 0) {
                         factors.push(i);
-                        rows += `<div class="text-emerald-700 font-bold">${n}÷${i}＝${n / i} ✓</div>`;
+                        rows += `<div class="text-orange-800 font-bold">${n}÷${i}＝${n / i} ✓</div>`;
                     } else {
                         rows += `<div class="text-stone-600">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
                     }
                 }
                 aidHtml = `
-                    <span class="text-red-600 font-bold">輔助算式（逐一測試除法，整除的就是因數）：</span>
+                    <span class="text-stone-900 font-bold">輔助算式（逐一測試除法，整除的就是因數）：</span>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
                 answerHtml = `${factors.join('、')}（共 ${factors.length} 個）`;
             } else if (q.subType === 'multiples') {
@@ -672,10 +721,10 @@
                 let rows = "";
                 for (let i = 1; i <= count; i++) {
                     mults.push(n * i);
-                    rows += `<div class="text-emerald-700 font-bold">${n}×${i}＝${n * i}</div>`;
+                    rows += `<div class="text-orange-800 font-bold">${n}×${i}＝${n * i}</div>`;
                 }
                 aidHtml = `
-                    <span class="text-red-600 font-bold">輔助算式（用乘法依序找倍數）：</span>
+                    <span class="text-stone-900 font-bold">輔助算式（用乘法依序找倍數）：</span>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
                 answerHtml = `${mults.join('、')}`;
             } else if (q.subType === 'factors_range') {
@@ -684,16 +733,16 @@
                 const factors = divisorsOf(n);
                 const picked = factors.filter(d => d >= lo && d <= hi);
                 const chips = factors.map(d => picked.includes(d)
-                    ? `<span class="text-emerald-700 font-bold underline">${d}</span>`
+                    ? `<span class="text-orange-800 font-bold underline">${d}</span>`
                     : `<span class="text-stone-600">${d}</span>`).join('、');
                 let rows = "";
                 for (let i = lo; i <= hi; i++) {
                     rows += n % i === 0
-                        ? `<div class="text-emerald-700 font-bold">${n}÷${i}＝${n / i} ✓</div>`
+                        ? `<div class="text-orange-800 font-bold">${n}÷${i}＝${n / i} ✓</div>`
                         : `<div class="text-stone-600">${n}÷${i}＝${Math.floor(n / i)}...${n % i}</div>`;
                 }
                 aidHtml = `
-                    <span class="text-red-600 font-bold">輔助算式（只測試 ${lo}～${hi}，含 ${lo} 和 ${hi}）：</span>
+                    <span class="text-stone-900 font-bold">輔助算式（只測試 ${lo}～${hi}，含 ${lo} 和 ${hi}）：</span>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>
                     <div class="mt-2">${n} 的所有因數：${chips}<br>落在 ${lo}～${hi} 之間的才是答案。</div>`;
                 answerHtml = `${picked.join('、')}`;
@@ -707,10 +756,10 @@
                     const v = n * k;
                     const inRange = v >= lo && v <= hi;
                     if (inRange) picked.push(v);
-                    rows += `<div class="${inRange ? 'text-emerald-700 font-bold' : 'text-stone-600'}">${n}×${k}＝${v}${inRange ? ' ✓' : ''}</div>`;
+                    rows += `<div class="${inRange ? 'text-orange-800 font-bold' : 'text-stone-600'}">${n}×${k}＝${v}${inRange ? ' ✓' : ''}</div>`;
                 }
                 aidHtml = `
-                    <span class="text-red-600 font-bold">輔助算式（先估計起點，含 ${lo} 和 ${hi}）：</span><br>
+                    <span class="text-stone-900 font-bold">輔助算式（先估計起點，含 ${lo} 和 ${hi}）：</span><br>
                     ${lo} ÷ ${n} ＝ ${Math.floor(lo / n)} ... ${lo % n}，所以從 ${n} × ${startK} 附近開始找：
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2 font-mono">${rows}</div>`;
                 answerHtml = `${picked.join('、')}`;
@@ -720,22 +769,22 @@
                 const factorsA = [], factorsB = [];
                 let rowsA = "", rowsB = "";
                 for (let i = 1; i <= a; i++) {
-                    if (a % i === 0) { factorsA.push(i); rowsA += `<div class="text-emerald-700 font-bold">${a}÷${i}＝${a / i} ✓</div>`; }
+                    if (a % i === 0) { factorsA.push(i); rowsA += `<div class="text-orange-800 font-bold">${a}÷${i}＝${a / i} ✓</div>`; }
                     else { rowsA += `<div class="text-stone-600">${a}÷${i}＝${Math.floor(a / i)}...${a % i}</div>`; }
                 }
                 for (let i = 1; i <= b; i++) {
-                    if (b % i === 0) { factorsB.push(i); rowsB += `<div class="text-emerald-700 font-bold">${b}÷${i}＝${b / i} ✓</div>`; }
+                    if (b % i === 0) { factorsB.push(i); rowsB += `<div class="text-orange-800 font-bold">${b}÷${i}＝${b / i} ✓</div>`; }
                     else { rowsB += `<div class="text-stone-600">${b}÷${i}＝${Math.floor(b / i)}...${b % i}</div>`; }
                 }
                 const common = factorsA.filter(x => factorsB.includes(x));
                 const g = gcdCalc(a, b);
                 aidHtml = `
-                    <span class="text-red-600 font-bold">輔助算式（分別列出兩數的除法算式）：</span>
+                    <span class="text-stone-900 font-bold">輔助算式（分別列出兩數的除法算式）：</span>
                     <div class="grid grid-cols-2 gap-3 mt-2">
                         <div><div class="font-bold text-gray-600 mb-1">${a} 的因數：</div><div class="font-mono">${rowsA}</div></div>
                         <div><div class="font-bold text-gray-600 mb-1">${b} 的因數：</div><div class="font-mono">${rowsB}</div></div>
                     </div>
-                    <div class="mt-2">兩邊都整除的數字就是【公因數】，其中最大的稱為<span class="font-bold">最大公因數(GCD)</span>。</div>`;
+                    <div class="mt-2">兩邊都整除的數字就是【公因數】，其中最大的稱為<span class="font-bold">最大公因數</span>。</div>`;
                 answerHtml = `${common.join('、')}（最大公因數為 ${g}）`;
             } else {
                 const a = q.a, b = q.b, count = q.count;
@@ -745,28 +794,28 @@
                 let rowsA = "", rowsB = "";
                 for (let i = 1; a * i <= limit; i++) {
                     const isCommon = (a * i) % l === 0;
-                    rowsA += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-stone-600'}">${a}×${i}＝${a * i}${isCommon ? ' ✓' : ''}</div>`;
+                    rowsA += `<div class="${isCommon ? 'text-orange-800 font-bold' : 'text-stone-600'}">${a}×${i}＝${a * i}${isCommon ? ' ✓' : ''}</div>`;
                 }
                 for (let i = 1; b * i <= limit; i++) {
                     const isCommon = (b * i) % l === 0;
-                    rowsB += `<div class="${isCommon ? 'text-emerald-700 font-bold' : 'text-stone-600'}">${b}×${i}＝${b * i}${isCommon ? ' ✓' : ''}</div>`;
+                    rowsB += `<div class="${isCommon ? 'text-orange-800 font-bold' : 'text-stone-600'}">${b}×${i}＝${b * i}${isCommon ? ' ✓' : ''}</div>`;
                 }
                 const commons = [];
                 for (let i = 1; i <= count; i++) commons.push(l * i);
                 aidHtml = `
-                    <span class="text-red-600 font-bold">輔助算式（分別列出兩數的乘法算式）：</span>
+                    <span class="text-stone-900 font-bold">輔助算式（分別列出兩數的乘法算式）：</span>
                     <div class="grid grid-cols-2 gap-3 mt-2">
                         <div><div class="font-bold text-gray-600 mb-1">${a} 的倍數：</div><div class="font-mono">${rowsA}</div></div>
                         <div><div class="font-bold text-gray-600 mb-1">${b} 的倍數：</div><div class="font-mono">${rowsB}</div></div>
                     </div>
-                    <div class="mt-2">兩邊都出現的數字就是【公倍數】，其中最小的稱為<span class="font-bold">最小公倍數(LCM)</span>。</div>`;
+                    <div class="mt-2">兩邊都出現的數字就是【公倍數】，其中最小的稱為<span class="font-bold">最小公倍數</span>。</div>`;
                 answerHtml = `${commons.join('、')}（最小公倍數為 ${l}）`;
             }
 
             return `
                 ${splitReveal(show, `${titleText}${buildFactorScaffold(q)}`, answerHtml, `
                     <div class="detail-show w-full mt-2">
-                        <div class="text-sm text-left bg-orange-50 text-orange-950 border border-orange-200 p-3 rounded-lg leading-relaxed font-sans">
+                        <div class="text-sm text-left bg-[#f6efdc] text-stone-900 border border-stone-300 p-3 rounded-lg leading-relaxed font-sans">
                             ${aidHtml}
                         </div>
                     </div>`)}`;
@@ -792,7 +841,7 @@
             const simpDen = l / g;
 
             const titleText = `
-                <div class="q-title q-title-lg flex items-center gap-3 mb-2">
+                <div role="img" aria-label="${d1}分之${n1} ${op === '+' ? '加' : '減'} ${d2}分之${n2} 等於多少" class="q-title q-title-lg flex items-center gap-3 mb-2">
                     ${fracHTML(n1, d1)}
                     <span>${op === '+' ? '＋' : '－'}</span>
                     ${fracHTML(n2, d2)}
@@ -801,7 +850,7 @@
                 </div>`;
 
             const aidHtml = `
-                <span class="text-red-600 font-bold">異分母加減：先通分（找分母的最小公倍數）</span><br>
+                <span class="text-stone-900 font-bold">異分母加減：先通分（找分母的最小公倍數）</span><br>
                 ${d1} 和 ${d2} 的最小公倍數 ＝ ${l}<br>
                 通分：${n1}/${d1} ＝ ${c1}/${l}　，　${n2}/${d2} ＝ ${c2}/${l}<br>
                 計算：${c1} ${op} ${c2} ＝ ${resultNum}<br>
@@ -812,7 +861,7 @@
             return `
                 ${splitReveal(show, titleText, answerText, `
                     <div class="detail-show w-full mt-2">
-                        <div class="text-sm text-left bg-stone-100 text-stone-900 border border-stone-300 p-3 rounded-lg leading-relaxed font-sans">
+                        <div class="text-sm text-left bg-[#f6efdc] text-stone-900 border border-stone-300 p-3 rounded-lg leading-relaxed font-sans">
                             ${aidHtml}
                         </div>
                     </div>`)}`;
@@ -831,7 +880,7 @@
             if (z1 > 0 || z2 > 0) {
                 const sN1 = n1 / Math.pow(10, z1);
                 const sN2 = n2 / Math.pow(10, z2);
-                simplifyTip = `<div class="mt-3 text-sm bg-emerald-50 text-emerald-800 p-2 rounded border border-emerald-100 font-bold whitespace-normal leading-normal">簡化想法：先算 ${sN1} × ${sN2} ＝ ${sN1 * sN2}，最後尾數再補上 ${z1 + z2} 個 0。</div>`;
+                simplifyTip = `<div class="mt-3 text-sm bg-[#f6efdc] text-stone-900 p-2 rounded border border-stone-300 font-bold whitespace-normal leading-normal">簡化想法：先算 ${sN1} × ${sN2} ＝ ${sN1 * sN2}，最後尾數再補上 ${z1 + z2} 個 0。</div>`;
             }
 
             let carryHTML = "";
@@ -880,7 +929,7 @@
             }
 
             return splitReveal(show,
-                `<div class="math-font px-2 text-left">${carryContainer}${baseMath}</div>`,
+                `<div role="img" aria-label="${n1} 乘以 ${n2}" class="math-font px-2 text-left">${carryContainer}${baseMath}</div>`,
                 ansStr,
                 `<div class="math-font px-2 text-left"><div class="detail-show text-gray-600">${detail}</div></div>${simplifyTip}`);
         }
@@ -902,7 +951,7 @@
                 const sN2 = n2 / Math.pow(10, commonZeros);
                 const sR = sN1 % sN2;
                 let rTip = r > 0 ? `，簡化餘數 ${sR} 要放大 ${Math.pow(10, commonZeros)} 倍變成實質餘數 ${r}` : "（剛好整除）";
-                simplifyTip = `<div class="mt-3 text-sm bg-amber-50 text-amber-800 p-2 rounded border border-amber-100 font-bold whitespace-normal leading-normal">簡化想法：被除數與除數同時劃掉 ${commonZeros} 個 0，變成算 ${sN1} ÷ ${sN2}${rTip}。</div>`;
+                simplifyTip = `<div class="mt-3 text-sm bg-[#f6efdc] text-stone-900 p-2 rounded border border-stone-300 font-bold whitespace-normal leading-normal">簡化想法：被除數與除數同時劃掉 ${commonZeros} 個 0，變成算 ${sN1} ÷ ${sN2}${rTip}。</div>`;
             }
 
             let outTop = "";
@@ -956,11 +1005,11 @@
             }
 
             if (r > 0) {
-                detail += `\n<span class="text-amber-600 font-bold text-sm"> (餘數為 ${r})</span>`;
+                detail += `\n<span class="text-orange-800 font-bold text-sm"> (餘數為 ${r})</span>`;
             }
 
             return splitReveal(show,
-                `<div class="math-font px-2 text-left"><div> </div>${outBase}</div>`,
+                `<div role="img" aria-label="${n1} 除以 ${n2}" class="math-font px-2 text-left"><div> </div>${outBase}</div>`,
                 `${q}${r > 0 ? `　餘 ${r}` : ''}`,
                 `<div class="math-font px-2 text-left"><div class="detail-show text-gray-600">${detail}</div></div>${simplifyTip}`);
         }
@@ -1009,7 +1058,7 @@
             const withAnswers = kind === 'answers';
             const cells = questions.map((q, index) => {
                 const { mathContent, typeLabel } = cardParts(q, withAnswers);
-                return `<section class="print-cell"><div class="print-label">${q.label} [${typeLabel}]</div><div class="print-body">${mathContent}</div></section>`;
+                return `<section class="print-cell"><div class="print-label">${q.label}・${typeLabel}</div><div class="print-body">${mathContent}</div></section>`;
             }).join('');
             const area = document.getElementById('printArea');
             area.innerHTML = `
@@ -1033,8 +1082,8 @@
                 const cardHtml = `
                     <article aria-label="${q.label} ${typeLabel}" class="paper-card border border-stone-300 rounded-lg p-5 min-h-[420px] hover:border-orange-400 transition-colors flex flex-col relative group">
                         <div class="flex justify-between items-center pb-2 mb-4">
-                            <span class="text-orange-700 font-bold text-sm bg-orange-50 border border-orange-100 px-2 py-1 rounded shadow-sm">${q.label} [${typeLabel}]</span>
-                            <button id="refresh-${index}" type="button" onclick="refreshOne(event, ${index})" class="refresh-btn text-stone-600 hover:text-orange-700 hover:bg-gray-100 p-1.5 rounded transition opacity-0 group-hover:opacity-100 group-focus-within:opacity-100" aria-label="單獨更換${q.label}的數字" title="單獨更換此題數字"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
+                            <span class="text-orange-700 font-bold text-sm bg-orange-50 border border-orange-100 px-2 py-1 rounded shadow-sm">${q.label}・${typeLabel}</span>
+                            <button id="refresh-${index}" type="button" onclick="refreshOne(event, ${index})" class="refresh-btn text-stone-600 hover:text-orange-700 hover:bg-stone-100 w-10 h-10 flex items-center justify-center rounded-md transition opacity-70 hover:opacity-100 focus-visible:opacity-100" aria-label="單獨更換${q.label}的數字" title="單獨更換此題數字"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
                         </div>
                         
                         <div id="answer-${index}" class="flex-1 flex justify-center w-full items-start mt-2">
@@ -1042,7 +1091,7 @@
                         </div>
 
                         <div class="mt-4 pt-3 text-center">
-                            <button id="reveal-${index}" type="button" onclick="toggleShow(${index})" aria-expanded="${q.show}" aria-controls="answer-${index}" class="text-sm font-bold text-orange-900 bg-white border border-orange-300 hover:bg-orange-50 px-4 py-1.5 rounded-md transition">
+                            <button id="reveal-${index}" type="button" onclick="toggleShow(${index})" aria-expanded="${q.show}" aria-controls="answer-${index}" class="text-sm font-bold text-orange-900 bg-white border border-orange-300 hover:bg-orange-50 px-5 min-h-[44px] rounded-md transition">
                                 ${q.show ? '隱藏解答' : '顯示解答與解法'}
                             </button>
                         </div>
@@ -1051,6 +1100,7 @@
                 cards += cardHtml;
             });
             container.innerHTML = cards;
+            settledSnap = captureCurrent();
         }
     </script>
 </body>
