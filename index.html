@@ -68,12 +68,15 @@
             flex-direction: column;
             gap: 1rem;
         }
-        @media (min-width: 1024px) { .sheet { aspect-ratio: 210 / 297; padding: 1.75rem; } }
+        @media (min-width: 1024px) { .sheet { max-width: none; padding: 1.25rem; } }
         .sheet-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid #78716c; color: #292524; }
         .sheet-head h2 { font-size: 1.2rem; font-weight: 700; }
         .sheet-head span { font-size: 0.95rem; color: #57534e; white-space: nowrap; }
-        .sheet-grid { flex: 1; display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
-        @media (min-width: 640px) { .sheet-grid { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; } }
+        .sheet-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        @media (min-width: 640px) { .sheet-grid { grid-template-columns: 1fr 1fr; } }
+        /* 寬螢幕：4 欄 × 2 列，8 題一眼看完，不必捲動；展開解答的格子佔兩欄 */
+        @media (min-width: 1180px) { .sheet-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .cell-open { grid-column: span 2; } }
+        .cell .math-font { font-size: 1.45rem; }
         .cell { border: 1px solid #a8a29e; border-radius: 0.5rem; padding: 0.9rem; display: flex; flex-direction: column; min-width: 0; transition: border-color .15s; }
         .cell:hover { border-color: #ea580c; }
         
@@ -93,7 +96,7 @@
     </header>
 
     <main class="max-w-7xl mx-auto w-full p-4 md:p-6 flex-1">
-        <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:gap-8 lg:items-start">
+        <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8 lg:items-start">
 
             <aside aria-label="出題設定" class="lg:sticky lg:top-4 bg-[#fffdf5] rounded-xl border border-stone-300 shadow-sm">
                 <div class="p-5 flex flex-col gap-4">
@@ -1159,7 +1162,7 @@
                             </button>
                         </div>` : '';
                 const cardHtml = `
-                    <article aria-label="${q.label} ${typeLabel}" class="cell">
+                    <article aria-label="${q.label} ${typeLabel}" class="cell${teacherMode && q.show ? ' cell-open' : ''}">
                         <div class="flex justify-between items-center mb-3 min-h-[2.5rem]">
                             <span class="text-orange-800 font-bold text-sm">${q.label}・${typeLabel}</span>${teacherControls}
                         </div>
